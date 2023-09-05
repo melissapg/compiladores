@@ -1,12 +1,13 @@
 local lexer =  {}
-
+-- remover aux1, aux2 do codigo...
+-- resolver o problema das strings grandes e comentarios com as linhas e colunas
 
 function lexer.init_lexer(str)
   --[=[
   Init global variables.
   ]=]
   pos = 1
-  lin, col = 1, 0
+  lin, col = 1, 1
   texto = str
 end
 
@@ -15,41 +16,44 @@ function is_keyword(variable)
   --[=[
   Check if a variable is a keyword.
   ]=]
-  keywords = {'true', 'false', 'nil', 'while', 'for',
-              'do', 'end', 'in', 'if', 'then', 'else',
-              'elseif', 'local', 'function', 'repeat',
-              'until', 'return', 'break',
-              'not', 'and', 'or'}  -- conferir se NOT, AND, OR são keywords ou não
+  keywords = {'true', 'false', 'nil', 'local',
+              'while', 'for', 'do', 'end', 'in',
+              'if', 'then', 'else', 'elseif',
+              'function', 'return', 'break',
+              'repeat', 'until',
+              'not', 'and', 'or'}
   for _, v in pairs(keywords) do
       if v == variable then
-        return true
+        return variable  -- string.upper(variable)
       end
   end
   return false
 end
 
 
-function walk(dir)
+function walk(walk_col)
   --[=[
   Pass by lines and columns.
   ]=]
-  if dir == 'col' then
+  local line, column = lin, col
+  if walk_col then  -- sums to column
     col = col + 1
   else  -- sums to line and restart the column
     lin = lin + 1
-    col = -1  -- mudar aqui
+    col = 1
   end
+  return line, column
 end
 
 
-function gen_token(tag, value)
+function gen_token(tag, value, line, column)
   --[=[
   Generate token with accordingly tag and value, if exists.
   ]=]
   if value then
-    return {lin = lin, col = col, tag = tag, value = value}
+    return {lin = line, col = column, tag = tag, value = value}
   else
-    return {lin = lin, col = col, tag = tag}
+    return {lin = line, col = column, tag = tag}
   end
 end
 
@@ -61,17 +65,20 @@ function lexer.get_next_token()
   local c = string.sub(texto, pos, pos)
 
   if c == "" then  -- eof
-    return gen_token('EOF')
+    return gen_token('EOF', nil, walk(true))
 
-  elseif c == '\n' or string.byte(c) == 10 then -- newline
-    pos = pos + 1
-    walk()
-    return gen_token('NEWLINE')
+  elseif c == '\n' or c == '\r' then -- newline
+    if (c == '\n' and string.sub(texto, pos+1, pos+1) == '\r') or
+       (c == '\r' and string.sub(texto, pos+1, pos+1) == '\n') then
+      pos = pos + 2
+    else
+      pos = pos + 1
+    end
+    return gen_token('NEWLINE', nil, walk(false))
 
   elseif c == " " or c == "\t" then -- space, tab
     pos = pos + 1
-    walk('col')
-    return gen_token('SPACE')
+    return gen_token('SPACE', nil, walk(true))
 
   elseif c == "-" and string.sub(texto, pos+1, pos+1) == '-' then -- comentario
     pos = pos + 2
@@ -82,7 +89,7 @@ function lexer.get_next_token()
         c = string.sub(texto, pos, pos)
         if c == ']' and string.sub(texto, pos+1, pos+1) == ']' then
           pos = pos + 1
-          walk()
+          aux1, aux2 = walk(false)
           break
         end
       end
@@ -93,7 +100,7 @@ function lexer.get_next_token()
         c = string.sub(texto, pos, pos)
         if c == ']' and string.sub(texto, pos+1, pos+1) == '=' and string.sub(texto, pos+2, pos+2) == ']' then
           pos = pos + 1
-          walk()
+          aux1, aux2 = walk(false)
           break
         end
       end
@@ -101,15 +108,15 @@ function lexer.get_next_token()
       while true do
         pos = pos + 1
         c = string.sub(texto, pos, pos)
-        if c == "\n" or c == "" then
+        if c == "\n" or c == "" or c == '\r' then
           pos = pos + 1
-          walk()
+          aux1, aux2 = walk(false)
           break
         end
       end
     end
-    walk('col')
-    return gen_token('COMMENT')
+    aux1, aux2 = walk(true)
+    return gen_token('COMMENT', nil, aux1, aux2)
 
   elseif string.byte(c) >= 48 and string.byte(c) <= 57 then -- numeros
     local number = c
@@ -117,12 +124,14 @@ function lexer.get_next_token()
     while true do
       pos = pos + 1
       c = string.sub(texto, pos, pos)
-      if c == "" or  c == " " or c == "\t" or c == "\n" then
+      if c == "" or  c == " " or c == "\t" or c == "\n" or c == '\r' then
         break
       elseif string.byte(c) < 48 or string.byte(c) > 57 then
         if c == 'x' or c == 'e' or c == '.' then
           goto continue
-        elseif string.byte(c) >= 65 and string.byte(c) <= 70 then  -- hexadecimal
+        elseif string.byte(c) >= 65 and string.byte(c) <= 70 then  -- hexadecimal minusculo
+          goto continue
+        elseif string.byte(c) >= 97 and string.byte(c) <= 102 then  -- hexadecimal maiusculo
           goto continue
         else
           break
@@ -131,8 +140,7 @@ function lexer.get_next_token()
       ::continue::  -- conferir com o professor se pode usar isso aqui
       number = number..c
     end
-    walk('col')
-    return gen_token('NUMBER', number)
+    return gen_token('NUMERO', tonumber(number), walk(true))  -- conferir se pode usar tonumber
 
   elseif (string.byte(c) >= 65 and string.byte(c) <= 90) or
          (string.byte(c) >= 97 and string.byte(c) <= 122) or
@@ -142,7 +150,7 @@ function lexer.get_next_token()
     while true do
       pos = pos + 1
       c = string.sub(texto, pos, pos)
-      if c == "" or  c == " " or c == "\t" or c == "\n" then
+      if c == "" or  c == " " or c == "\t" or c == "\n" or c == '\r' then
         break
       elseif string.byte(c) < 65 or string.byte(c) > 90 then
         if string.byte(c) >= 97 and string.byte(c) <= 122 then
@@ -159,11 +167,11 @@ function lexer.get_next_token()
       variable = variable..c
     end
 
-    walk('col')
-    if is_keyword(variable) then  -- keyword
-      return gen_token('KEYWORD', variable)
+    is_k = is_keyword(variable)
+    if is_k then  -- keyword
+      return gen_token(is_k, nil, walk(true))
     else
-      return gen_token('VARIABLE', variable)
+      return gen_token('NOME', variable, walk(true))
     end
 
   elseif c == "'" then -- string aspas simples
@@ -177,8 +185,7 @@ function lexer.get_next_token()
       end
       str = str..c
     end
-    walk('col')
-    return gen_token('STRING', str)
+    return gen_token('STRING', str, walk(true))
 
   elseif c == '"' then -- string aspas duplas
     local str = ""
@@ -191,8 +198,7 @@ function lexer.get_next_token()
       end
       str = str..c
     end
-    walk('col')
-    return gen_token('STRING', str)
+    return gen_token('STRING', str, walk(true))
 
   elseif c == '[' and (string.sub(texto, pos+1, pos+1) == '[' or string.sub(texto, pos+1, pos+1) == '=') then
     local str = ""
@@ -205,10 +211,15 @@ function lexer.get_next_token()
         if c == ']' and string.sub(texto, pos+1, pos+1) == ']' then
           pos = pos + 1
           break
-        elseif c == "\n" then
-          walk()
+        elseif c == "\n" or c == '\r' then
+          aux1, aux2 = walk(false)
+        elseif c == '\\' and (string.sub(texto, pos+1, pos+1) == 'n' or string.sub(texto, pos+1, pos+1) == 'r') then
+          pos = pos + 1
+          str = str..'\n'
+          goto continue
         end
         str = str..c
+        ::continue::  -- conferir com o professor se pode usar isso aqui
       end
     elseif c == '=' then  -- string enorme
       pos = pos + 1
@@ -218,27 +229,29 @@ function lexer.get_next_token()
         if c == ']' and string.sub(texto, pos+1, pos+1) == '=' and string.sub(texto, pos+2, pos+2) == ']' then
           pos = pos + 2
           break
-        elseif c == "\n" then
-          walk()
+        elseif c == "\n" or c == '\r' then
+          aux1, aux2 = walk(false)
+        elseif c == '\\' and (string.sub(texto, pos+1, pos+1) == 'n' or string.sub(texto, pos+1, pos+1) == 'r') then
+          pos = pos + 1
+          str = str..'\n'
+          goto continue
         end
         str = str..c
+        ::continue::  -- conferir com o professor se pode usar isso aqui
       end
     end
     pos = pos + 1
-    walk('col')
-    return gen_token('STRING', str)
+    return gen_token('STRING', str, walk(true))
 
   elseif c == "," or c == ";" or c == ":" or c == "(" or
          c == ")" or c == "[" or c == "]" or c == "{" or c == "}" then  -- pontuacao
     pos = pos + 1
-    walk('col')
-    return gen_token(c)
+    return gen_token(c, nil, walk(true))
 
   elseif c == "+" or c == "-" or c == "*" or c == "/" or
          c == "^" or c == "%" or c == "#" or c == "&" or c == "|" then  -- operadores
     pos = pos + 1
-    walk('col')
-    return gen_token(c)
+    return gen_token(c, nil, walk(true))
 
   elseif c == "." then
     pos = pos + 1
@@ -246,60 +259,54 @@ function lexer.get_next_token()
       pos = pos + 1
       if string.sub(texto, pos, pos) == '.' then  -- ...
         pos = pos + 1
-        walk('col')
-        return gen_token(c..string.sub(texto, pos-2, pos-1))
+        return gen_token(c..string.sub(texto, pos-2, pos-1), nil, walk(true))
       else  -- ..
-        walk('col')
-        return gen_token(c..string.sub(texto, pos-1, pos-1))
+        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk(true))
       end
     else
-      walk('col')
-      return gen_token(c)
+      return gen_token(c, nil, walk(true))
     end
 
   elseif c == "=" then
     pos = pos + 1
     if string.sub(texto, pos, pos) == '=' then  -- ==
       pos = pos + 1
-      walk('col')
-      return gen_token(c..string.sub(texto, pos-1, pos-1))
+      return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk(true))
     else
-      walk('col')
-      return gen_token(c)
+      return gen_token(c, nil, walk(true))
     end
 
   elseif c == "~" then
       pos = pos + 1
       if string.sub(texto, pos, pos) == '=' then  -- ~=
         pos = pos + 1
-        walk('col')
-        return gen_token(c..string.sub(texto, pos-1, pos-1))
+        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk(true))
       else
-        walk('col')
-        return gen_token(c)
+        return gen_token(c, nil, walk(true))
       end
 
   elseif c == "<" then
       pos = pos + 1
       if string.sub(texto, pos, pos) == '<' or string.sub(texto, pos, pos) == '=' then  -- <= ou >>
         pos = pos + 1
-        walk('col')
-        return gen_token(c..string.sub(texto, pos-1, pos-1))
+        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk(true))
       else
-        walk('col')
-        return gen_token(c)
+        return gen_token(c, nil, walk(true))
       end
 
   elseif c == ">" then
       pos = pos + 1
       if string.sub(texto, pos, pos) == '>' or string.sub(texto, pos, pos) == '=' then  -- <= ou <<
         pos = pos + 1
-        walk('col')
-        return gen_token(c..string.sub(texto, pos-1, pos-1))
+        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk(true))
       else
-        walk('col')
-        return gen_token(c)
+        return gen_token(c, nil, walk(true))
       end
+
+  else  -- nenhum dos casos acima
+    print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
+          'Character '..c.." doesn't match any token pattern.\n")
+    os.exit(1)
   end
 
 end
