@@ -293,14 +293,14 @@ function lexer.get_next_token()
     end
     return gen_token('STRING', str, walk('column'))
 
-  -- [[strings especiais]]
+  --[[strings especiais]]
   elseif c == '[' and (string.sub(texto, pos+1, pos+1) == '[' or string.sub(texto, pos+1, pos+1) == '=') then
     local str = ""
     local line, column
 
     pos = pos + 1
     c = string.sub(texto, pos, pos)
-    -- [[string grande]]
+    --[[string grande]]
     if c == '[' then
       while true do
         pos = pos + 1
@@ -343,6 +343,7 @@ function lexer.get_next_token()
         str = str..c
         ::continue::
       end
+      line, column = walk('column')
     -- [[string enorme]]
     elseif c == '=' then
       pos = pos + 1
@@ -387,9 +388,9 @@ function lexer.get_next_token()
         str = str..c
         ::continue::
       end
+      line, column = walk('column')
     end
     pos = pos + 1
-    walk('column')
     return gen_token('STRING', str, line, column)
 
   -- [[pontuacoes]]
