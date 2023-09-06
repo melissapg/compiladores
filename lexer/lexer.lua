@@ -107,7 +107,7 @@ function lexer.get_next_token()
         pos = pos + 1
         c = string.sub(texto, pos, pos)
         if c == ']' and string.sub(texto, pos+1, pos+1) == '=' and string.sub(texto, pos+2, pos+2) == ']' then
-          pos = pos + 2
+          pos = pos + 3
           line, column = walk('column')
           break
         elseif c == "\n" or c == '\r' then
