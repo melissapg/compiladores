@@ -10,7 +10,7 @@ while true do
     end
     print(tok.lin..'\t'..tok.col..'\t'..tok.tag..'\t'..tok.value)
   end
-  if tok.tag == 'EOF' then  -- dando erro
+  if tok.tag == 'EOF' then
     break
   end
 end
