@@ -1,5 +1,5 @@
 local lexer =  {}
--- remover aux1, aux2 do codigo... (resolver o problema das strings grandes e comentarios com as linhas e colunas)
+
 
 function lexer.init_lexer(str)
   --[=[
@@ -296,6 +296,8 @@ function lexer.get_next_token()
   -- [[strings especiais]]
   elseif c == '[' and (string.sub(texto, pos+1, pos+1) == '[' or string.sub(texto, pos+1, pos+1) == '=') then
     local str = ""
+    local line, column
+
     pos = pos + 1
     c = string.sub(texto, pos, pos)
     -- [[string grande]]
@@ -307,7 +309,7 @@ function lexer.get_next_token()
           pos = pos + 1
           break
         elseif c == "\n" or c == '\r' then
-          aux1, aux2 = walk('line')
+          line, column = walk('line')
         elseif string.sub(texto, pos, pos+1) == '\\n' or string.sub(texto, pos, pos+1) == '\\r' then
           pos = pos + 1
           str = str..'\n'
@@ -351,7 +353,7 @@ function lexer.get_next_token()
           pos = pos + 2
           break
         elseif c == "\n" or c == '\r' then
-          aux1, aux2 = walk('line')
+          line, column = walk('line')
         elseif string.sub(texto, pos, pos+1) == '\\n' or string.sub(texto, pos, pos+1) == '\\r' then
           pos = pos + 1
           str = str..'\n'
@@ -387,7 +389,8 @@ function lexer.get_next_token()
       end
     end
     pos = pos + 1
-    return gen_token('STRING', str, walk('column'))
+    walk('column')
+    return gen_token('STRING', str, line, column)
 
   -- [[pontuacoes]]
   elseif c == "," or c == ";" or c == ":" or c == "(" or
