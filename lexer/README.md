@@ -1,10 +1,11 @@
 # Analisador Léxico - Lua
+#### Desenvolvido por Melissa Pereira Guarilha.
 
 Este programa tem como finalidade construir um analisador léxico para a linguagem de programação [Lua](https://www.lua.org).
 
 <!-- ## Table of Contents -->
 * [Geral](#geral)
-* [Setup](#setup)
+* [Run](#run)
 * [Testes](#testes)
 * [Considerações Finais](#considerações-finais)
 <br>
@@ -16,9 +17,9 @@ A estrutura do programa está definida em dois arquivos principais, sendo estes:
 
 A saída retornada pelo programa imprime na tela os tokens¹ do arquivo passado como parâmetro.
 
-¹Um token contém: linha, coluna, token e valor (este último sendo opcional).
+*¹Um token contém: linha, coluna, token e valor (este último sendo opcional).*
 
-## Setup
+## Run
 Para rodar o programa, execute utilizando o [Lua](https://www.lua.org):
 ```bash
 lua main.lua < "file_to_lexer.lua"
@@ -39,4 +40,6 @@ lua lexer_tests.lua
 ## Considerações Finais
 O ponto de dificuldade mais importante enfrentado neste trabalho se deu pelo fato de, por este programa ter sido escrito através do [Visual Studio Code](https://code.visualstudio.com) em ambiente Windows, os marcadores de 'nova linha' (\n e \r) foram duplicados (e por vezes triplicados, quadriplicados...) quando haviam ocorrências de comentários simples com o uso de *--*.
 
-O problema acarretou em uma dificuldade de categorizar corretamente o número da linha identificadora do token.
+O problema acarretou em uma dificuldade de categorizar corretamente o número da linha identificadora do token, já que a cada ocorrência de 'comentário simples' seguida de 'enter', quatro (ou mais) marcadores de 'nova linha' eram identificados. Optei por não inserir 'gambiarras' de tratamento para estes casos, pois isto poderia acarretar em um programa que roda corretamente (identifica todos os tokens) para um sistema operacional e erroneamente para outros.
+
+Para simular este caso, remova todos os comentários do _'main.lua'_ e execute-o no lexer. O retorno virá corretamente para o número de linhas. Agora adicione novamente os comentários em _'main.lua'_ e execute. Desta vez, cada comentário simples adicionado gerou +1 nova linha na contabilização de linhas.
