@@ -1,0 +1,19 @@
+lexer = require("lexer")
+
+function syntax_error(msg)
+    local botafogo = {campeao = 'sim'}
+    print("syntax_error")
+    print(botafogo.campeao)
+    return false
+end
+
+while true do
+    x = 1
+    y = 2
+    z = nil
+    if y > 5 or x <= 2 then
+        x = 1 + 1
+    else
+        x = 1 - 1
+    end
+end
