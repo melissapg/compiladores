@@ -1,32 +1,34 @@
 lexer = require("lexer")
-
-
--- melhorar essa função
-function syntax_error(msg)
-    print("SYNTAX ERROR", msg)
-    os.exit(1)
-end
-
-
+errors = require("errors_package")
 local parser =  {}
 
+
 function parser.init_parser(text)
+    --[=[
+    Inicia o parser com as variáveis 'globais'.
+    Recebe uma string contendo os tokens a serem processados.
+    ]=]
     lexer.init_lexer(text)
     prox = lexer.get_next_token()
 end
 
 
 function peek(tag)
-    -- confere se um token eh o esperado
-    -- print(prox.tag == tag, "|", prox.tag)
+    --[=[
+    Checa se proximo token é o esperado.
+    ]=]
     return prox.tag == tag
 end
 
 
 function eat(tag)
-    -- consome um token e atualiza p/ olhar o proximo
+    --[=[
+    Consome um token e avança para o próximo.
+    Retorna o valor associado ao token se este existir, senão retorna sua tag identificadora.
+    ]=]
+    -- confere se o token possui valor associado
     if prox.value then
-        current_tag = prox.value
+    current_tag = prox.value
     else
         current_tag = prox.tag
     end
@@ -34,16 +36,45 @@ function eat(tag)
         parser.walk()
         return current_tag
     else
-        syntax_error("Encontrei um: "..current_tag.." esperava um :"..prox.tag)
+        errors.syntax_error("Found: "..current_tag.." was expecting: "..prox.tag)
     end
 end
 
 
 function parser.walk()
-    -- pega o proximo token
+    --[=[
+    Avança para o próximo token.
+    ]=]
     prox = lexer.get_next_token()
+    -- avança os tokens que não serão utilizados na árvore
     while prox.tag == 'SPACE' or prox.tag == 'COMENTARIO' or prox.tag == 'NEWLINE' do
         prox = lexer.get_next_token()
+    end
+end
+
+
+function get_prec(op)
+    --[=[
+    Retorna a precedência dado determinado operador.
+    ]=]
+    if op == 'or' then
+        return 0
+    elseif op == 'and' then
+        return 1
+    elseif op == '<' or op == '>' or op == '<=' or op == '>=' or op == '==' or op == '~=' then
+        return 2
+    elseif op == '..' then
+        return 3
+    elseif op == '+' or op == '-' then
+        return 4
+    elseif op == '*' or op == '/' or op == '%' then
+        return 5
+    elseif op == 'not' or op == '#' or op == '-' then
+        return 6
+    elseif op == '(' or op == '[' then
+        return 7
+    else
+        return nil
     end
 end
 
@@ -59,6 +90,7 @@ end
 --[[Cmd]]
 function parseCmd()
     print("parseCmd")
+
     if peek("do") then
         eat("while")
         local block = parseBlock()
@@ -119,7 +151,7 @@ function parseCmd()
             return {tag = "CmdChamada", exp = exp1}
         end
     else
-        syntax_error("Esperava um comando.")
+        errors.syntax_error("Found: "..prox.tag.." but was expecting a command.")
     end
 end
 
@@ -141,34 +173,11 @@ function parseElses()
             local elses = parseElses()
             return {tag = "CmdIfElse", exp = exp, bloco = {tag = "Bloco", block = block}, elses = elses}
         else
-            syntax_error("Esperava um else ou elseif.")
+            errors.syntax_error("Found: "..prox.tag.."Was expecting a elseif or else.")
         end
     end
     eat("end")
     return nil
-end
-
-
-function get_prec(op)
-    if op == 'or' then
-        return 0
-    elseif op == 'and' then
-        return 1
-    elseif op == '<' or op == '>' or op == '<=' or op == '>=' or op == '==' or op == '~=' then
-        return 2
-    elseif op == '..' then
-        return 3
-    elseif op == '+' or op == '-' then
-        return 4
-    elseif op == '*' or op == '/' or op == '%' then
-        return 5
-    elseif op == 'not' or op == '#' or op == '-' then
-        return 6
-    elseif op == '(' or op == '[' then
-        return 7
-    else
-        return nil
-    end
 end
 
 
