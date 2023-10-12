@@ -4,7 +4,7 @@ texto = io.read("a")
 lexer.init_lexer(texto)
 while true do
   tok = lexer.get_next_token()
-  if tok.tag ~= 'SPACE' and tok.tag ~= 'COMMENT' and tok.tag ~= 'NEWLINE' then
+  if tok.tag ~= 'SPACE' and tok.tag ~= 'COMENTARIO' and tok.tag ~= 'NEWLINE' then
     if tok.value == nil then
       tok.value = ''
     end
