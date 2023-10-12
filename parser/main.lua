@@ -5,8 +5,4 @@ texto = io.read("a")
 
 parser.init_parser(texto)
 prog = parser.parseProg()
-
-print()  -- excluir
-print()  -- excluir
-
 print_prog.printProg(prog)

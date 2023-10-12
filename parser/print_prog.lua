@@ -49,7 +49,7 @@ function print_prog.printProg(e, indent)
 
     elseif e.tag == 'CmdFunction' then
         print(indentation(indent)..e.tag)
-        print_prog.printProg(e.name, indent+2)  -- bom acho que o erro ta nisso aqui
+        print_prog.printProg(e.name, indent+2)
         print_prog.printProg(e.params, indent+2)
         print_prog.printProg(e.bloco, indent+2)
         return
@@ -70,7 +70,7 @@ function print_prog.printProg(e, indent)
         print_prog.printProg(e.exp, indent+2)
         return
 
-    elseif e.tag == 'ExpUn' then  -- isso aqui tá rodando toda vida até a eternidade quando tá em NOT, parentenses...
+    elseif e.tag == 'ExpUn' then
         print(indentation(indent)..e.tag.." "..e.op)
         print_prog.printProg(e.exp, indent+2)
         return
@@ -81,12 +81,12 @@ function print_prog.printProg(e, indent)
         print_prog.printProg(e.e2, indent+2)
         return
 
-    elseif e.tag == 'ExpIndice' then  -- cade o primeiro nome do indice ??? erro
+    elseif e.tag == 'ExpIndice' then
         print(indentation(indent)..e.tag)
         print_prog.printProg(e.e, indent+2)
         return
 
-    elseif e.tag == 'ExpChamada' then  -- cade o nome da função que tá sendo chamada ??? erro
+    elseif e.tag == 'ExpChamada' then
         print(indentation(indent)..e.tag)
         print_prog.printProg(e.e, indent+2)
         return
@@ -111,7 +111,7 @@ function print_prog.printProg(e, indent)
         print(indentation(indent)..e.tag.." "..e.val)
         return
 
-    elseif e.tag == 'ExpTabela' then  -- erro nas tabelas com mais de um key, val
+    elseif e.tag == 'ExpTabela' then
         print(indentation(indent)..e.tag)
         for _, v in pairs(e.keyvals) do
             print_prog.printProg(v, indent+2)
@@ -119,7 +119,7 @@ function print_prog.printProg(e, indent)
         return
 
     elseif e.tag == 'KeyVal' then
-        print(indentation(indent)..e.tag)  -- ajustar aqui
+        print(indentation(indent)..e.tag)
         print_prog.printProg(e.key, indent+2)
         print_prog.printProg(e.val, indent+2)
         return
