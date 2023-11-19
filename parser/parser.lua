@@ -200,18 +200,21 @@ function parseExpSufixada()
     while true do
         if peek(".") then
             eat(".")
+            local table = e
             e = parseExpSufixada()
-            return {tag = 'ExpIndice', e = e}
+            return {tag = 'ExpIndice', table = table,  e = e}
         elseif peek("[") then
             eat("[")
+            local table = e
             e = parseExp(7)
             eat("]")
-            return {tag = 'ExpIndice', e = e}
+            return {tag = 'ExpIndice', table = table, e = e}
         elseif peek("(") then
             eat("(")
+            local func = e
             e = Exps()
             eat(")")
-            return {tag = 'ExpChamada', e = e}
+            return {tag = 'ExpChamada', func = func, e = e}
         else
             return e
         end

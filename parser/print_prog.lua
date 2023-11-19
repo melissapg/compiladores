@@ -83,11 +83,13 @@ function print_prog.printProg(e, indent)
 
     elseif e.tag == 'ExpIndice' then
         print(indentation(indent)..e.tag)
+        print_prog.printProg(e.table, indent+2)
         print_prog.printProg(e.e, indent+2)
         return
 
     elseif e.tag == 'ExpChamada' then
         print(indentation(indent)..e.tag)
+        print_prog.printProg(e.func, indent+2)
         print_prog.printProg(e.e, indent+2)
         return
 
