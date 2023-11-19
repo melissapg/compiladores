@@ -77,7 +77,7 @@ def eval(file):
             n1 = stack.pop_stack()
             print(n1)
             break
-        elif action in ['ADD', 'SUB', 'MUL', 'DIV', 'MOD', 'NEG']:
+        elif action in ['ADD', 'SUB', 'MUL', 'DIV', 'MOD']:
             n1 = stack.pop_stack()
             n2 = stack.pop_stack()
             stack.push_stack(calc_exp(n1, n2, action))
