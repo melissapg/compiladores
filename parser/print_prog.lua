@@ -96,6 +96,7 @@ function print_prog.printProg(e, indent)
         return
 
     elseif e.tag == 'ExpBool' then
+        if e.val == true then e.val = 'true' else e.val = 'false' end
         print(indentation(indent)..e.tag.." "..e.val)
         return
 

@@ -82,7 +82,7 @@ end
 --[[Prog]]
 function parser.parseProg()
     local block = parseBlock()
-    return {tag = 'Prog', bloco = {tag = "Bloco", block = block}}
+    return {tag = 'Prog', bloco = block}
 end
 
 
@@ -93,7 +93,7 @@ function parseCmd()
         eat("while")
         local block = parseBlock()
         eat("end")
-        return {tag = "CmdDo", bloco = {tag = "Bloco", block = block}}
+        return {tag = "CmdDo", bloco = block}
 
     elseif peek("while") then
         eat("while")
@@ -101,7 +101,7 @@ function parseCmd()
         eat("do")
         local block = parseBlock()
         eat("end")
-        return {tag = "CmdWhile", exp = exp, bloco = {tag = "Bloco", block = block}}
+        return {tag = "CmdWhile", exp = exp, bloco = block}
 
     elseif peek("if") then
         eat("if")
@@ -109,7 +109,7 @@ function parseCmd()
         eat("then")
         local block = parseBlock()
         local elses = parseElses()
-        return {tag = "CmdIfElse", exp = exp, bloco = {tag = "Bloco", block = block}, elses = elses}
+        return {tag = "CmdIfElse", exp = exp, bloco = block, elses = elses}
 
     elseif peek("local") then
         eat("local")
@@ -120,13 +120,13 @@ function parseCmd()
 
     elseif peek("function") then
         eat("function")
-        local name = parseExpPrimaria()
+        local name = eat("NOME")
         eat("(")
         local params = Params()
         eat(")")
         local block = parseBlock()
         eat("end")
-        return {tag = "CmdFunction", name = name, params = params, bloco = {tag = "Bloco", block = block}}
+        return {tag = "CmdFunction", name = {tag = 'ExpNome', val = name}, params = params, bloco = block}
 
     elseif peek("return") then
         eat("return")
@@ -162,7 +162,7 @@ function parseElses()
             eat("then")
             local block = parseBlock()
             local elses = parseElses()
-            return {tag = "CmdIfElse", exp = exp, bloco = {tag = "Bloco", block = block}, elses = elses}
+            return {tag = "CmdIfElse", exp = exp, bloco = block, elses = elses}
         else
             errors.syntax_error("Found: "..prox.tag.."Was expecting a elseif or else.")
         end
@@ -187,7 +187,7 @@ function parseExp(min_prec)
 
     while get_prec(prox.tag) and get_prec(prox.tag) >= min_prec do
         local op = eat(prox.tag)
-        local e2 = parseExp(min_prec + 1)
+        local e2 = parseExp(get_prec(op) + 1)
         e1 = {tag = 'ExpBin', op = op, e1 = e1, e2 = e2}
     end
     return e1
@@ -226,6 +226,7 @@ function parseExpSimples()
         return {tag = 'ExpNil', val = nil}
     elseif peek("true") or peek("false") then
         local bool = eat(prox.tag)
+        if bool == 'true' then bool = true else bool = false end
         return {tag = 'ExpBool', val = bool}
     elseif peek("NUMERO") then
         local number = eat('NUMERO')
@@ -258,7 +259,7 @@ function parseBlock()
     while not(peek("end") or peek("EOF") or peek("else") or peek("elseif")) do
         table.insert(cmd, parseCmd())
     end
-    return cmd
+    return {tag = 'Bloco', block = cmd}
 end
 
 
@@ -268,6 +269,9 @@ function parseTabela()
     local keyvals = {}
     local int_key = 1
     while not(peek("}")) do
+        if peek(",") then
+            eat(",")
+        end
         if not(peek("NOME")) then
             table.insert(keyvals, KeyVals(int_key))
             int_key = int_key + 1
@@ -291,6 +295,7 @@ function KeyVals(key)
         return {tag = 'KeyVal', key = name, val = exp}
     else
         exp = parseExp()
+        key = {tag = 'ExpNum', val = key}
         return {tag = 'KeyVal', key = key, val = exp}
     end
 end
@@ -300,6 +305,9 @@ end
 function Params()
     local params = {}
     while not(peek(")")) do
+        if peek(",") then
+            eat(",")
+        end
         local name = parseExpSufixada()
         table.insert(params, name)
     end
@@ -311,6 +319,9 @@ end
 function Exps()
     local exps = {}
     while not(peek(")")) do
+        if peek(",") then
+            eat(",")
+        end
         local exp = parseExp()
         table.insert(exps, exp)
     end
