@@ -28,7 +28,7 @@ function eat(tag)
     ]=]
     -- confere se o token possui valor associado
     if prox.value then
-    current_tag = prox.value
+        current_tag = prox.value
     else
         current_tag = prox.tag
     end
@@ -82,7 +82,7 @@ end
 --[[Prog]]
 function parser.parseProg()
     local block = parseBlock()
-    return {tag = 'Prog', bloco = {tag = "Bloco", block = block}}
+    return {tag = 'Prog', bloco = block}
 end
 
 
@@ -93,51 +93,51 @@ function parseCmd()
         eat("while")
         local block = parseBlock()
         eat("end")
-        return {tag = "CmdDo", bloco = {tag = "Bloco", block = block}}
+        return {tag = "CmdDo", bloco = block}
 
     elseif peek("while") then
         eat("while")
-        local exp = parser.parseExp()
+        local exp = parseExp()
         eat("do")
         local block = parseBlock()
         eat("end")
-        return {tag = "CmdWhile", exp = exp, bloco = {tag = "Bloco", block = block}}
+        return {tag = "CmdWhile", exp = exp, bloco = block}
 
     elseif peek("if") then
         eat("if")
-        local exp = parser.parseExp()
+        local exp = parseExp()
         eat("then")
         local block = parseBlock()
         local elses = parseElses()
-        return {tag = "CmdIfElse", exp = exp, bloco = {tag = "Bloco", block = block}, elses = elses}
+        return {tag = "CmdIfElse", exp = exp, bloco = block, elses = elses}
 
     elseif peek("local") then
         eat("local")
         local name = parseExpPrimaria()
         eat("=")
-        local exp = parser.parseExp()
+        local exp = parseExp()
         return {tag = 'CmdLocal', name = name, exp = exp}
 
     elseif peek("function") then
         eat("function")
-        local name = parseExpPrimaria()
+        local name = eat("NOME")
         eat("(")
         local params = Params()
         eat(")")
         local block = parseBlock()
         eat("end")
-        return {tag = "CmdFunction", name = name, params = params, bloco = {tag = "Bloco", block = block}}
+        return {tag = "CmdFunction", name = {tag = 'ExpNome', val = name}, params = params, bloco = block}
 
     elseif peek("return") then
         eat("return")
-        local exp = parser.parseExp()
+        local exp = parseExp()
         return {tag = "CmdReturn", exp = exp}
 
     elseif peek("NOME") then
         local exp1 = parseExpSufixada()
         if peek("=") then
             eat("=")
-            local exp2 = parser.parseExp()
+            local exp2 = parseExp()
             return {tag = "CmdAtribui", name = exp1, exp = exp2}
         else
             return {tag = "CmdChamada", exp = exp1}
@@ -158,11 +158,11 @@ function parseElses()
             return {tag = "Bloco", block = block}
         elseif peek("elseif") then
             eat("elseif")
-            local exp = parser.parseExp()
+            local exp = parseExp()
             eat("then")
             local block = parseBlock()
             local elses = parseElses()
-            return {tag = "CmdIfElse", exp = exp, bloco = {tag = "Bloco", block = block}, elses = elses}
+            return {tag = "CmdIfElse", exp = exp, bloco = block, elses = elses}
         else
             errors.syntax_error("Found: "..prox.tag.."Was expecting a elseif or else.")
         end
@@ -173,13 +173,13 @@ end
 
 
 --[[Exp]]
-function parser.parseExp(min_prec)
+function parseExp(min_prec)
     min_prec = min_prec or 0
 
     local e1 = nil
     if peek('#') or peek('-') or peek('not') then
         local op = eat(prox.tag)
-        local exp = parser.parseExp(6)
+        local exp = parseExp(6)
         e1 = {tag = 'ExpUn', op = op, exp = exp}
     else
         e1 = parseExpSimples()
@@ -187,7 +187,7 @@ function parser.parseExp(min_prec)
 
     while get_prec(prox.tag) and get_prec(prox.tag) >= min_prec do
         local op = eat(prox.tag)
-        local e2 = parser.parseExp(get_prec(op) + 1)
+        local e2 = parseExp(get_prec(op) + 1)
         e1 = {tag = 'ExpBin', op = op, e1 = e1, e2 = e2}
     end
     return e1
@@ -204,7 +204,7 @@ function parseExpSufixada()
             return {tag = 'ExpIndice', e = e}
         elseif peek("[") then
             eat("[")
-            e = parser.parseExp(7)
+            e = parseExp(7)
             eat("]")
             return {tag = 'ExpIndice', e = e}
         elseif peek("(") then
@@ -226,6 +226,7 @@ function parseExpSimples()
         return {tag = 'ExpNil', val = nil}
     elseif peek("true") or peek("false") then
         local bool = eat(prox.tag)
+        if bool == 'true' then bool = true else bool = false end
         return {tag = 'ExpBool', val = bool}
     elseif peek("NUMERO") then
         local number = eat('NUMERO')
@@ -247,7 +248,7 @@ function parseExpPrimaria()
         local name = eat("NOME")
         return {tag = 'ExpNome', val = name}
     elseif peek("(") then
-        return parser.parseExp()
+        return parseExp()
     end
 end
 
@@ -258,7 +259,7 @@ function parseBlock()
     while not(peek("end") or peek("EOF") or peek("else") or peek("elseif")) do
         table.insert(cmd, parseCmd())
     end
-    return cmd
+    return {tag = 'Bloco', block = cmd}
 end
 
 
@@ -268,6 +269,9 @@ function parseTabela()
     local keyvals = {}
     local int_key = 1
     while not(peek("}")) do
+        if peek(",") then
+            eat(",")
+        end
         if not(peek("NOME")) then
             table.insert(keyvals, KeyVals(int_key))
             int_key = int_key + 1
@@ -287,10 +291,11 @@ function KeyVals(key)
     if peek("NOME") then
         local name = parseExpPrimaria()
         eat("=")
-        exp = parser.parseExp()
+        exp = parseExp()
         return {tag = 'KeyVal', key = name, val = exp}
     else
-        exp = parser.parseExp()
+        exp = parseExp()
+        key = {tag = 'ExpNum', val = key}
         return {tag = 'KeyVal', key = key, val = exp}
     end
 end
@@ -300,6 +305,9 @@ end
 function Params()
     local params = {}
     while not(peek(")")) do
+        if peek(",") then
+            eat(",")
+        end
         local name = parseExpSufixada()
         table.insert(params, name)
     end
@@ -311,7 +319,10 @@ end
 function Exps()
     local exps = {}
     while not(peek(")")) do
-        local exp = parser.parseExp()
+        if peek(",") then
+            eat(",")
+        end
+        local exp = parseExp()
         table.insert(exps, exp)
     end
     return {tag = "Exps", exps = exps}

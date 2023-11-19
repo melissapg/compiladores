@@ -28,7 +28,7 @@ function eat(tag)
     ]=]
     -- confere se o token possui valor associado
     if prox.value then
-    current_tag = prox.value
+        current_tag = prox.value
     else
         current_tag = prox.tag
     end
