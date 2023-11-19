@@ -43,7 +43,7 @@ def calc_exp(n1, n2, op):
             print(f"ZeroDivisionError: division by zero.")
             exit(True)
         else:    
-            return n2 / n1
+            return n2 // n1
     elif op == 'MOD':
         if n1 == 0:
             print(f"ZeroDivisionError: division by zero.")
@@ -60,11 +60,14 @@ def calc_exp(n1, n2, op):
 def eval(file):
     stack = Stack()
     variables = {}  # variáveis globais
-
+    prog = []  # array de instruções
     for line in file.readlines():
+        prog.append(line)
+
+    for line in prog:
         action = line.split()[0]
         if action == 'NUMBER':
-            stack.push_stack(float(line.split()[1]))
+            stack.push_stack(int(line.split()[1]))
         elif action == 'NEG':
             n1 = stack.pop_stack()
             stack.push_stack(calc_exp(n1, None, action))
@@ -72,7 +75,7 @@ def eval(file):
             var = stack.pop_stack()
             variables[line.split()[1]] = var
         elif action == 'GETGLOBAL':
-            stack.push_stack(float(variables[line.split()[1]]))
+            stack.push_stack(int(variables[line.split()[1]]))
         elif action == 'RETURN':
             n1 = stack.pop_stack()
             print(n1)

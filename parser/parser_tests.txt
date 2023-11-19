@@ -13,7 +13,9 @@ while true do
     z = nil
     if y > 5 or x <= 2 then
         x = 1 + 1
-    else
+    elseif y < 4 then
         x = 1 - 1
+    else
+        x = 0
     end
 end

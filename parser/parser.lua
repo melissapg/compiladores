@@ -155,7 +155,7 @@ function parseElses()
             eat("else")
             local block = parseBlock()
             eat("end")
-            return {tag = "Bloco", block = block}
+            return block
         elseif peek("elseif") then
             eat("elseif")
             local exp = parseExp()
