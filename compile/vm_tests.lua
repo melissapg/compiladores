@@ -1,4 +1,3 @@
-abcd= "abcd"
-a = table_insert({1,2,3, bota="fogo"}, 'a')
-print(a)
-print(table_remove(a, 'bota'))
+a = {10, 20, c=30}
+a[1] = 5
+print(a[1] + a.c)

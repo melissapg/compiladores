@@ -245,6 +245,32 @@ def eval(prog):
             # inverte a ordem dos itens para que o dict seja exatamente igual à tabela em lua
             newtable = dict(list(newtable.items())[::-1])
             stack.push_stack(newtable)
+        
+        elif instruction == 'GET_TABLE':
+            key = stack.pop_stack()
+            table = stack.pop_stack()
+            if not isinstance(table, dict):
+                print(f"Error: Table {table} is not defined.")
+                exit(True)
+            try:
+                val = table[key]
+            except (KeyError, TypeError):  # se a chave não estiver presente, produz nil
+                val = None
+            stack.push_stack(val)
+
+        elif instruction == 'SET_TABLE':
+            val = stack.pop_stack()
+            key = stack.pop_stack()
+            table = stack.pop_stack()
+            if not isinstance(table, dict):
+                print(f"Error: Table {table} is not defined.")
+                exit(True)
+            try:
+                table[key] = val
+            except (KeyError, TypeError):  # se a chave não estiver presente, produz nil
+                print(f"Error: Table key must not be None.")
+                exit(True)
+
 
         elif instruction == 'EXIT':
             break
