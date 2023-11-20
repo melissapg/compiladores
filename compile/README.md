@@ -29,7 +29,7 @@ python vm.py "compiled_file".byte
 
 
 ## Testes
-Neste caso, usei como base para teste um arquivo *.txt* que contém comandos em *Lua*:
+Neste caso, usei como base para teste um arquivo *.lua* que contém comandos em *Lua*:
 ```bash
 lua compile.lua < vm_tests.txt > prog.byte
 python vm.py prog.byte
