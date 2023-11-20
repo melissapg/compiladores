@@ -267,10 +267,9 @@ def eval(prog):
                 exit(True)
             try:
                 table[key] = val
-            except (KeyError, TypeError):  # se a chave não estiver presente, produz nil
+            except (KeyError, TypeError):  # não aceita chave nil
                 print(f"Error: Table key must not be None.")
                 exit(True)
-
 
         elif instruction == 'EXIT':
             break
