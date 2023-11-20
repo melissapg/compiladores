@@ -143,6 +143,18 @@ class FunçaoInterna:
             del table[key]
         return table
 
+    def assert_error(self, args: list):
+        return
+
+    def io_read(self, args: list):
+        return
+
+    def io_write(self, args: list):
+        return
+
+    def os_exit(self, args: list):
+        return
+
     def all(self):
         return {
             "print": self.print,
@@ -154,7 +166,11 @@ class FunçaoInterna:
             "string_rep": self.string_rep,
             "string_sub": self.string_sub,
             "table_insert": self.table_insert,
-            "table_remove": self.table_remove
+            "table_remove": self.table_remove,
+            "assert": self.assert_error,
+            "io_read": self.io_read,
+            "io_write": self.io_write,
+            "os_exit": self.os_exit
         }
 
 
