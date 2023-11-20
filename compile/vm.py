@@ -105,9 +105,8 @@ def eval(prog):
             variables[line.split()[1]] = var
 
         elif instruction == 'GET_GLOBAL':
-            glob = line.split()[1]
             try:
-                val = variables[glob]
+                val = variables[line.split()[1]]
             except:
                 val = None
             stack.push_stack(val)
