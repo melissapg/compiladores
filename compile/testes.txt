@@ -7,11 +7,17 @@ print(table_remove(a, 'bota'))
 
 
 b = #"1"
-a = string_sub('abcd'..b..1, 2)
+a = string_sub('abcd'..b..1, 2, 5)
 print(a)
 
 a = string_rep('abcd', 2)
 print(a)
 
-a = string_byte('abcd', 1)
+a = string_byte('abcd', 2)
 print(a)
+
+print(string_sub("abcd", 2, 3))
+
+x = {10, 20, c=30}
+x[1] = 5
+print(x[1] + x.c)

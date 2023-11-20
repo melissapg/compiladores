@@ -25,7 +25,12 @@ function compile_prog(e)
       compile_prog(e.exp)
       print("SET_GLOBAL "..e.name.val)
     elseif e.name.tag == 'ExpIndice' then
-      compile_prog(e.name)
+      compile_prog(e.name.table)
+      -- Uma tabela x tem como índice um y qualquer, que é representado como uma string. (x.y <=> x["y"]) 
+      if e.name.e.tag == 'ExpNome' then
+        e.name.e.tag = 'ExpStr'
+      end
+      compile_prog(e.name.e)
       compile_prog(e.exp)
       print("SET_TABLE")
     end
