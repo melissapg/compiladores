@@ -23,7 +23,7 @@ function compile_prog(e)
   elseif e.tag == 'CmdAtribui' then
     if e.name.tag == 'ExpNome' then
       compile_prog(e.exp)
-      print("SETGLOBAL "..e.name.val)
+      print("SET_GLOBAL "..e.name.val)
     elseif e.name.tag == 'ExpIndice' then
       compile_prog(e.name)
       compile_prog(e.exp)
@@ -83,8 +83,8 @@ function compile_prog(e)
     print("NUMBER "..e.val)
     return
   elseif e.tag == 'ExpStr' then
-    pos = 1
-    word = ''
+    local pos = 1
+    local word = ''
     while true do
       char = string.sub(e.val, pos, pos)
       if char == '\n' then
