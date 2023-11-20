@@ -1,15 +1,3 @@
-abcd= "abcd"
-a = table_insert({1,2,3, bota="fogo"}, 'a')
-print(a)
-print(table_remove(a, 'bota'))
-
-
-b = #"1"
-a = string_sub('abcd'..b..1, 2, 5)
-print(a)
-
-a = string_rep('abcd', 2)
-print(a)
-
-a = string_byte('abcd', 2)
-print(a)
+a = {10, 20, c=30}
+a[1] = 5
+print(a[1] + a.c)
