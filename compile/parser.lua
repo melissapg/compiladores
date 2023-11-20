@@ -292,7 +292,7 @@ function KeyVals(key)
     key = key or nil
     local exp = nil
     if peek("NOME") then
-        local name = parseExpPrimaria()
+        local name = {tag = 'ExpStr', val = eat("NOME")}
         eat("=")
         exp = parseExp()
         return {tag = 'KeyVal', key = name, val = exp}

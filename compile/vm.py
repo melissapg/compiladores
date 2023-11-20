@@ -1,17 +1,31 @@
 import sys
+import re
 
 
-try:
-    prog = sys.argv[1]
-except IndexError:
-    print("Error: A file needs to be provided.\n")
-    raise
+def list_instructions():
+    """
+    Cria uma lista de instruções a partir de um arquivo
+    passado como argumento na chamada do programa.
 
-try:
-    f = open(prog, "r")
-except (IOError, FileNotFoundError):
-    print("FileNotFoundError: File not found.\n")
-    raise
+    :return: Uma lista de instruções
+    """
+    prog_array = []  # array de instruções
+
+    try:
+        prog = sys.argv[1]
+    except IndexError:
+        print("Error: A file needs to be provided.\n")
+        raise
+
+    try:
+        f = open(prog, "r")
+    except (IOError, FileNotFoundError):
+        print("FileNotFoundError: File not found.\n")
+        raise
+
+    for line in f.readlines():
+        prog_array.append(line)
+    return prog_array
 
 
 class Stack:
@@ -31,6 +45,9 @@ class Stack:
         return False if self.stack else True
 
 
+# class GlobalFunctions:
+
+
 def calc_exp(n1, n2, op):
     if op == 'ADD':
         return n2 + n1
@@ -38,7 +55,7 @@ def calc_exp(n1, n2, op):
         return n2 - n1
     elif op == 'MUL':
         return n2 * n1
-    elif op == 'DIV':
+    elif op == 'IDIV':
         if n1 == 0:
             print(f"ZeroDivisionError: division by zero.")
             exit(True)
@@ -57,35 +74,60 @@ def calc_exp(n1, n2, op):
         exit(True)
 
 
-def eval(file):
+
+def eval(prog):
     stack = Stack()
-    variables = {}  # variáveis globais
-    prog = []  # array de instruções
-    for line in file.readlines():
-        prog.append(line)
+    # variables = GlobalFunctions().all()  # variáveis globais
+    variables = {}
 
     for line in prog:
-        action = line.split()[0]
-        if action == 'NUMBER':
+        instruction = line.split()[0]
+        if instruction == 'NUMBER':
             stack.push_stack(int(line.split()[1]))
-        elif action == 'NEG':
+        elif instruction == 'NEG':
             n1 = stack.pop_stack()
-            stack.push_stack(calc_exp(n1, None, action))
-        elif action == 'SETGLOBAL':
+            if type(n1) != int:
+                print(f"TypeError: unsupported operand type(s) for {instruction}: 'int' and {type(n1)}")
+                exit(True)
+            stack.push_stack(calc_exp(n1, None, instruction))
+        elif instruction == 'NIL':
+            stack.push_stack(None)
+        elif instruction == 'STRING':
+            string = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', line)[0]
+            string = string.replace("@n", "\n").replace("@r", "\r").replace("@@", "@")  # add aqui o @q
+            stack.push_stack(str(string))
+        elif instruction == 'SETGLOBAL':
             var = stack.pop_stack()
             variables[line.split()[1]] = var
-        elif action == 'GETGLOBAL':
-            stack.push_stack(int(variables[line.split()[1]]))
-        elif action == 'RETURN':
+        elif instruction == 'GETGLOBAL':
+            val = variables[line.split()[1]]
+            if not val:  # isso tá ok?
+                val = None
+            stack.push_stack(val)
+        elif instruction == 'NEW_TABLE':
+            newtable = {}
+            for _ in range(int(line.split()[1])):
+                val = stack.pop_stack()
+                key = stack.pop_stack()
+                newtable[key] = val
+            stack.push_stack(newtable)
+        elif instruction == 'RETURN':  # remover!
             n1 = stack.pop_stack()
             print(n1)
             break
-        elif action in ['ADD', 'SUB', 'MUL', 'DIV', 'MOD']:
+        elif instruction in ['ADD', 'SUB', 'MUL', 'IDIV', 'MOD']:
             n1 = stack.pop_stack()
             n2 = stack.pop_stack()
-            stack.push_stack(calc_exp(n1, n2, action))
+            if type(n1) != int or type(n2) != int:
+                print(f"TypeError: unsupported operand type(s) for {instruction}: {type(n1)} and {type(n1)}")
+                exit(True)
+            stack.push_stack(calc_exp(n1, n2, instruction))
         else:
-            print(f"Error: the action {action} doesn't exists.")
+            print(f"Error: the instruction {instruction} doesn't exists.")
             exit(True)
 
-eval(f)
+
+#---------------------------------------------- EXECUÇÃO DO PROGRAMA ---------------------------------------
+
+prog = list_instructions()
+eval(prog)
