@@ -16,6 +16,8 @@ function compile_prog(e)
       compile_prog(v)
     end
     return
+  -- elseif e.tag == 'CmdWhile' then
+  --   -- do something here
   elseif e.tag == 'CmdReturn' then
     compile_prog(e.exp)
     print("RETURN")
@@ -80,9 +82,45 @@ function compile_prog(e)
     compile_prog(e.exp)
     print("LEN")
     return
+  elseif e.tag == 'ExpBin' and e.op == '==' then
+    compile_prog(e.e1)
+    compile_prog(e.e2)
+    print("EQ")
+    return
+  elseif e.tag == 'ExpBin' and e.op =='~=' then
+    compile_prog(e.e1)
+    compile_prog(e.e2)
+    print("NEQ")
+    return
+  elseif e.tag == 'ExpBin' and e.op =='<' then
+    compile_prog(e.e1)
+    compile_prog(e.e2)
+    print("LT")
+    return
+  elseif e.tag == 'ExpBin' and e.op =='<=' then
+    compile_prog(e.e1)
+    compile_prog(e.e2)
+    print("LE")
+    return
+  elseif e.tag == 'ExpBin' and e.op =='>' then
+    compile_prog(e.e1)
+    compile_prog(e.e2)
+    print("GT")
+    return
+  elseif e.tag == 'ExpBin' and e.op =='>=' then
+    compile_prog(e.e1)
+    compile_prog(e.e2)
+    print("GE")
 
   elseif e.tag == 'ExpNil' then
     print("NIL")
+    return
+  elseif e.tag == 'ExpBool' then
+    if e.val == true then
+      print("BOOL ".."true")
+    else
+      print("BOOL ".."false")
+    end
     return
   elseif e.tag == 'ExpNum' then
     print("NUMBER "..e.val)
