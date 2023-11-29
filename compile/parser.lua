@@ -251,7 +251,10 @@ function parseExpPrimaria()
         local name = eat("NOME")
         return {tag = 'ExpNome', val = name}
     elseif peek("(") then
-        return parseExp()
+        eat("(")
+        local exp = parseExp()
+        eat(")")
+        return exp
     end
 end
 
