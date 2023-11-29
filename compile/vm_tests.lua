@@ -1,3 +1,6 @@
-a = {10, 20, c=30}
-a[1] = 5
-print(a[1] + a.c)
+a = 1
+b = 2
+c = a > b
+d = a < b
+print(c)
+print(d)

@@ -200,6 +200,24 @@ def calc_exp(n1, n2, op):
         exit(True)
 
 
+def get_bool(n1, n2, op):
+    if op == 'EQ':
+        return n2 == n1
+    elif op == 'NEQ':
+        return n2 != n1
+    elif op == 'LT':
+        return n2 < n1
+    elif op == 'LE':
+        return n2 <= n1
+    elif op == 'GT':
+        return n2 > n1
+    elif op == 'GE':
+        return n2 >= n1
+    else:
+        print(f"Error: exp operation {op} doesn't exist.")
+        exit(True)
+
+
 def eval(prog):
     stack = Stack()
     variables = FunçaoInterna().all()  # variáveis globais
@@ -212,6 +230,14 @@ def eval(prog):
 
         elif instruction == 'NIL':
             stack.push_stack(None)
+
+        elif instruction == 'BOOL':
+            bool_t = line.split()[1]
+            if bool_t == 'true':
+                bool_t = True
+            else:
+                bool_t = False
+            stack.push_stack(bool_t)
 
         elif instruction == 'NEG':
             n1 = stack.pop_stack()
@@ -299,6 +325,15 @@ def eval(prog):
                 print(f"TypeError: unsupported operand type(s) for {instruction}: {type(n1)} and {type(n1)}")
                 exit(True)
             stack.push_stack(calc_exp(n1, n2, instruction))
+
+        elif instruction in ['EQ', 'NEQ', 'LT', 'LE', 'GT', 'GE']:
+            n1 = stack.pop_stack()
+            n2 = stack.pop_stack()
+            if instruction in ['LT', 'LE', 'GT', 'GE'] and (type(n1) != int or type(n2) != int):
+                print(f"TypeError: unsupported operand type(s) for {instruction}: {type(n1)} and {type(n1)}")
+                exit(True)
+
+            stack.push_stack(get_bool(n1, n2, instruction))
 
         elif instruction == 'LEN':
             n1 = stack.pop_stack()
