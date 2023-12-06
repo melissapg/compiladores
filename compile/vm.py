@@ -221,8 +221,10 @@ def get_bool(n1, n2, op):
 def eval(prog):
     stack = Stack()
     variables = FunçaoInterna().all()  # variáveis globais
+    program_counter = 0
 
-    for line in prog:
+    while True:
+        line = prog[program_counter]
         instruction = line.split()[0]
 
         if instruction == 'NUMBER':
@@ -359,9 +361,27 @@ def eval(prog):
             str_concat = str(n2)+str(n1)
             stack.push_stack(str_concat)
 
+        elif instruction == 'JUMP':
+            program_counter = int(line.split()[1])
+            continue
+
+        elif instruction == 'JUMP_TRUE':
+            bool_t = stack.pop_stack()
+            if bool_t:
+                program_counter = int(line.split()[1])
+                continue
+
+        elif instruction == 'JUMP_FALSE':
+            bool_t = stack.pop_stack()
+            if not bool_t:
+                program_counter = int(line.split()[1])
+                continue
+
         else:
             print(f"Error: the instruction {instruction} doesn't exists.")
             exit(True)
+
+        program_counter += 1
 
 
 #---------------------------------------------- EXECUÇÃO DO PROGRAMA ---------------------------------------
