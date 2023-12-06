@@ -75,6 +75,15 @@ function compile_prog(e)
       compile_prog(v)
     end
     return
+  elseif e.tag == 'CmdWhile' then
+    local lbl_cond = new_label()
+    fix_label(lbl_cond)
+    local lbl_fim = new_label()
+    compileJumpFalse(e.exp, lbl_fim)
+    compile_prog(e.bloco)
+    add_instr("JUMP", lbl_cond)
+    fix_label(lbl_fim)
+    return
   elseif e.tag == 'CmdIfElse' then
     local lbl_else = new_label()
     local lbl_fim = new_label()

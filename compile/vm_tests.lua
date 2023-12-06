@@ -1,8 +1,5 @@
-a = 1
-b = 2
-c = 3
-if(b > a and c >= 3) then
-  print("Oi")
-else
-  print("tchau")
+x = 0
+while x < 5 or false do
+  print("oi")
+  x = x+1
 end
