@@ -14,8 +14,8 @@ function add_instr(instruction, val)
 end
 
 
-labels = {}
-labels_counter = 0
+labels = {}  -- armazena as labels
+labels_counter = 0  -- contador de labels
 function new_label()
   labels_counter = labels_counter + 1
   local lbl_id = 'l'..labels_counter
@@ -99,13 +99,11 @@ function compile_prog(e)
   elseif e.tag == 'CmdReturn' then
     compile_prog(e.exp)
     add_instr("RETURN")
-    -- print("RETURN")
     return
   elseif e.tag == 'CmdAtribui' then
     if e.name.tag == 'ExpNome' then
       compile_prog(e.exp)
       add_instr("SET_GLOBAL", e.name.val)
-      -- print("SET_GLOBAL "..e.name.val)
     elseif e.name.tag == 'ExpIndice' then
       compile_prog(e.name.table)
       -- Uma tabela x tem como índice um y qualquer, que é representado como uma string. (x.y <=> x["y"]) 
@@ -115,115 +113,95 @@ function compile_prog(e)
       compile_prog(e.name.e)
       compile_prog(e.exp)
       add_instr("SET_TABLE")
-      -- print("SET_TABLE")
     end
     return
   elseif e.tag == 'CmdChamada' then
     compile_prog(e.exp)
     add_instr("POP", 1)
-    -- print("POP "..1)
     return
 
   elseif e.tag == 'ExpBin' and e.op == '+' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("ADD")
-    -- print("ADD")
     return
   elseif e.tag == 'ExpBin' and e.op == '-' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("SUB")
-    -- print("SUB")
     return
   elseif e.tag == 'ExpBin' and e.op == '/' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("IDIV")
-    -- print("IDIV")
     return
   elseif e.tag == 'ExpBin' and e.op == '*' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("MUL")
-    -- print("MUL")
     return
   elseif e.tag == 'ExpBin' and e.op == '%' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("MOD")
-    -- print("MOD")
     return
   elseif e.tag == 'ExpBin' and e.op == '..' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("CONCAT")
-    -- print("CONCAT")
     return
 
   elseif e.tag == 'ExpUn' and e.op == '-' then
     compile_prog(e.exp)
     add_instr("NEG")
-    -- print("NEG")
     return
   
   elseif e.tag == 'ExpUn' and e.op == '#' then
     compile_prog(e.exp)
     add_instr("LEN")
-    -- print("LEN")
     return
   elseif e.tag == 'ExpBin' and e.op == '==' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("EQ")
-    -- print("EQ")
     return
   elseif e.tag == 'ExpBin' and e.op =='~=' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("NEQ")
-    -- print("NEQ")
     return
   elseif e.tag == 'ExpBin' and e.op =='<' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("LT")
-    -- print("LT")
     return
   elseif e.tag == 'ExpBin' and e.op =='<=' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("LE")
-    -- print("LE")
     return
   elseif e.tag == 'ExpBin' and e.op =='>' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("GT")
-    -- print("GT")
     return
   elseif e.tag == 'ExpBin' and e.op =='>=' then
     compile_prog(e.e1)
     compile_prog(e.e2)
     add_instr("GE")
-    -- print("GE")
 
   elseif e.tag == 'ExpNil' then
     add_instr("NIL")
-    -- print("NIL")
     return
   elseif e.tag == 'ExpBool' then
     if e.val == true then
       add_instr("BOOL", "true")
-      -- print("BOOL ".."true")
     else
       add_instr("BOOL", "false")
-      -- print("BOOL ".."false")
     end
     return
   elseif e.tag == 'ExpNum' then
     add_instr("NUMBER", e.val)
-    -- print("NUMBER "..e.val)
     return
   elseif e.tag == 'ExpStr' then
     local pos = 1
@@ -244,11 +222,9 @@ function compile_prog(e)
       pos = pos + 1
     end
     add_instr('STRING "'..word..'"')
-    -- print('STRING "'..word..'"')
     return
   elseif e.tag == 'ExpNome' then
     add_instr("GET_GLOBAL", e.val)
-    -- print("GET_GLOBAL "..e.val)
     return
 
   elseif e.tag == 'ExpIndice' then
@@ -259,7 +235,6 @@ function compile_prog(e)
     end
     compile_prog(e.e)
     add_instr("GET_TABLE")
-    -- print("GET_TABLE")
     return
 
   elseif e.tag == 'ExpChamada' then
@@ -273,7 +248,6 @@ function compile_prog(e)
       exps = exps + 1
     end
     add_instr("CALL", exps)
-    -- print("CALL "..exps)
     return
 
   elseif e.tag == 'ExpTabela' then
@@ -283,7 +257,6 @@ function compile_prog(e)
       keys = keys + 1
     end
     add_instr("NEW_TABLE", keys)
-    -- print("NEW_TABLE "..keys)
     return
   elseif e.tag == 'KeyVal' then
     compile_prog(e.key)
