@@ -6,16 +6,16 @@ parser.init_parser(texto)
 prog = parser.parseProg()
 
 
-instructions = {}  -- armazena as instruções
-program_counter = 0  -- contador de instruções
+instructions = {}  -- armazena as instruções  // dentro de uma funcao
+program_counter = 0  -- contador de instruções  // dentro de uma funcao
 function add_instr(instruction, val)
   program_counter = program_counter + 1
   table.insert(instructions, {instr = instruction, val = val})
 end
 
 
-labels = {}  -- armazena as labels
-labels_counter = 0  -- contador de labels
+labels = {}  -- armazena as labels  // dentro de uma funcao
+labels_counter = 0  -- contador de labels  // dentro de uma funcao
 function new_label()
   labels_counter = labels_counter + 1
   local lbl_id = 'l'..labels_counter
@@ -65,6 +65,46 @@ function compileJumpTrue(exp, dest)
 end
 
 
+locals = {}
+locals_counter = 0
+function create_variable(name)
+  locals_counter = locals_counter + 1
+  table.insert(locals, {name = name})
+  return locals_counter
+end
+
+
+function find_variable(name)
+  local len_locals = locals_counter
+  while len_locals > 0 do
+    if name == locals[len_locals].name then
+      return len_locals
+    end
+    len_locals =  len_locals - 1
+  end
+  return nil
+end
+
+
+scopes = {}  -- escopos  // dentro de uma funcao
+scopes_counter = 0
+function enter_scope()
+  scopes_counter = scopes_counter + 1
+  table.insert(scopes, locals_counter)
+end
+
+
+-- pop em todas as variáveis locais do escopo que está saindo
+function exit_scope()
+  while locals_counter > scopes[scopes_counter] do
+    table.remove(locals, locals_counter)
+    locals_counter = locals_counter - 1
+  end
+  table.remove(scopes, scopes_counter)
+  scopes_counter = scopes_counter - 1
+end
+
+
 function compile_prog(e)
   if e.tag == 'Prog' then
     compile_prog(e.bloco)
@@ -76,6 +116,7 @@ function compile_prog(e)
     end
     return
   elseif e.tag == 'CmdWhile' then
+    enter_scope()
     local lbl_cond = new_label()
     fix_label(lbl_cond)
     local lbl_fim = new_label()
@@ -83,8 +124,10 @@ function compile_prog(e)
     compile_prog(e.bloco)
     add_instr("JUMP", lbl_cond)
     fix_label(lbl_fim)
+    exit_scope()
     return
   elseif e.tag == 'CmdIfElse' then
+    enter_scope()
     local lbl_else = new_label()
     local lbl_fim = new_label()
     compileJumpFalse(e.exp, lbl_else)
@@ -95,15 +138,54 @@ function compile_prog(e)
       compile_prog(e.elses)
     end
     fix_label(lbl_fim)
+    exit_scope()
+    return
+  elseif e.tag == 'CmdLocal' then
+    local id = create_variable(e.name.val)
+    if e.exp then
+      compile_prog(e.exp)
+    else
+      add_instr("NIL")
+    end
+    add_instr("SET_LOCAL", id)
+    return
+  elseif e.tag == 'CmdFunction' then
+    enter_scope()
+    local func_name = e.name.val
+    local cont_params = 0
+    local i = 1
+    while true do
+      if not e.params.params[i] then
+        break
+      end
+      create_variable(e.params.params[i].val)
+      cont_params = cont_params + 1
+      i = i + 1
+    end
+    add_instr("FUNCTION "..func_name, cont_params)
+    compile_prog(e.bloco)
+    exit_scope()
+    add_instr("NIL")
+    add_instr("RETURN")
     return
   elseif e.tag == 'CmdReturn' then
-    compile_prog(e.exp)
-    add_instr("RETURN")
+    if not e.exp then
+      add_instr("NIL")
+      add_instr("RETURN")
+    else
+      compile_prog(e.exp)
+      add_instr("RETURN")
+    end
     return
   elseif e.tag == 'CmdAtribui' then
     if e.name.tag == 'ExpNome' then
       compile_prog(e.exp)
-      add_instr("SET_GLOBAL", e.name.val)
+      local is_local = find_variable(e.name.val)
+      if is_local ~= nil then
+        add_instr("SET_LOCAL", is_local)
+      else
+        add_instr("SET_GLOBAL", e.name.val)
+      end
     elseif e.name.tag == 'ExpIndice' then
       compile_prog(e.name.table)
       -- Uma tabela x tem como índice um y qualquer, que é representado como uma string. (x.y <=> x["y"]) 
@@ -224,7 +306,12 @@ function compile_prog(e)
     add_instr('STRING "'..word..'"')
     return
   elseif e.tag == 'ExpNome' then
-    add_instr("GET_GLOBAL", e.val)
+    local is_local = find_variable(e.val)
+    if is_local ~= nil then
+      add_instr("GET_LOCAL", is_local)
+    else
+      add_instr("GET_GLOBAL", e.val)
+    end
     return
 
   elseif e.tag == 'ExpIndice' then

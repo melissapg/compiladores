@@ -2,32 +2,6 @@ import sys
 import re
 
 
-def list_instructions():
-    """
-    Cria uma lista de instruções a partir de um arquivo
-    passado como argumento na chamada do programa.
-
-    :return: Uma lista de instruções
-    """
-    prog_array = []  # array de instruções
-
-    try:
-        prog = sys.argv[1]
-    except IndexError:
-        print("Error: A file needs to be provided.\n")
-        raise
-
-    try:
-        f = open(prog, "r")
-    except (IOError, FileNotFoundError):
-        print("FileNotFoundError: File not found.\n")
-        raise
-
-    for line in f.readlines():
-        prog_array.append(line)
-    return prog_array
-
-
 class Stack:
     def __init__(self):
         self.stack = []
@@ -46,10 +20,10 @@ class Stack:
 
 
 class FunçaoInterna:
-    def index_error(self, func_name: str, args: list, n_args: int = 1):
+    def index_error(self, function_name: str, args: list, n_args: int = 1):
         more_args = f' or {n_args}' if n_args != 1 else ''
         if len(args) < n_args:
-            print(f"TypeError: {func_name}() takes 1{more_args} argument(s).")
+            print(f"TypeError: {function_name}() takes 1{more_args} argument(s).")
             exit(True)
 
     def print(self, args: list, out: str = ''):
@@ -174,6 +148,48 @@ class FunçaoInterna:
         }
 
 
+class FuncaoExterna:
+    def __init__(self):
+        self.functions = {}
+
+    def add_function(self, name, n_args, address):
+        self.functions[name] = {"address": address + 1,
+                                "n_args": n_args}
+
+    def find_function(self, name):
+        # ver o que realmente precisa add aqui, CALL
+        if name in self.functions:
+            return self.functions[name]
+        else:
+            return False
+
+
+def list_instructions():
+    """
+    Cria uma lista de instruções a partir de um arquivo
+    passado como argumento na chamada do programa.
+
+    :return: Uma lista de instruções
+    """
+    prog_array = []  # array de instruções
+
+    try:
+        prog = sys.argv[1]
+    except IndexError:
+        print("Error: A file needs to be provided.\n")
+        raise
+
+    try:
+        f = open(prog, "r")
+    except (IOError, FileNotFoundError):
+        print("FileNotFoundError: File not found.\n")
+        raise
+
+    for line in f.readlines():
+        prog_array.append(line)
+    return prog_array
+
+
 def calc_exp(n1, n2, op):
     if op == 'ADD':
         return n2 + n1
@@ -221,7 +237,11 @@ def get_bool(n1, n2, op):
 def eval(prog):
     stack = Stack()
     variables = FunçaoInterna().all()  # variáveis globais
+    functions = FuncaoExterna()  # funções externas
     program_counter = 0
+
+    saved_stack = stack
+    saved_pc = program_counter
 
     while True:
         line = prog[program_counter]
@@ -261,6 +281,20 @@ def eval(prog):
             try:
                 val = variables[line.split()[1]]
             except:
+                try:
+                    val = functions.find_function(line.split()[1])
+                except:
+                    val = None
+            stack.push_stack(val)
+
+        elif instruction == 'SET_LOCAL':
+            var = stack.pop_stack()
+            variables[int(line.split()[1])] = var
+
+        elif instruction == 'GET_LOCAL':
+            try:
+                val = variables[int(line.split()[1])]
+            except:
                 val = None
             stack.push_stack(val)
 
@@ -269,7 +303,7 @@ def eval(prog):
             for _ in range(int(line.split()[1])):
                 val = stack.pop_stack()
                 key = stack.pop_stack()
-                newtable[key] = val 
+                newtable[key] = val
             # inverte a ordem dos itens para que o dict seja exatamente igual à tabela em lua
             newtable = dict(list(newtable.items())[::-1])
             stack.push_stack(newtable)
@@ -299,8 +333,16 @@ def eval(prog):
                 print(f"Error: Table key must not be None.")
                 exit(True)
 
-        elif instruction == 'EXIT':
-            break
+        elif instruction == 'FUNCTION':
+            function_name = line.split()[1]
+            n_args = int(line.split()[2])
+            functions.add_function(function_name, n_args, program_counter)
+            while True:  # dá pra simplificar e melhorar isso aqui
+                instruction = prog[program_counter].split()[0]
+                program_counter += 1
+                next_instruction = prog[program_counter].split()[0]
+                if instruction == 'NIL' and next_instruction == "RETURN":
+                        break
 
         elif instruction == 'CALL':
             n_args = int(line.split()[1])
@@ -314,7 +356,24 @@ def eval(prog):
             if not func:
                 print(f"Error: The passed function doesn't exist.")
                 exit(True)
-            stack.push_stack(func(args))
+            if isinstance(func, dict):
+                saved_stack = stack
+                saved_pc = program_counter
+                stack = Stack()
+                for i in range(n_args):
+                    stack.push_stack(args[i])
+                    variables[i+1] = args[i]
+
+                program_counter = func['address']
+                continue
+            else:
+               stack.push_stack(func(args))
+
+        elif instruction == 'RETURN':
+            ret = stack.pop_stack()
+            stack = saved_stack
+            program_counter = saved_pc
+            stack.push_stack(ret)
 
         elif instruction == 'POP':
             for _ in range(int(line.split()[1])):
@@ -376,6 +435,9 @@ def eval(prog):
             if not bool_t:
                 program_counter = int(line.split()[1])
                 continue
+
+        elif instruction == 'EXIT':
+            break
 
         else:
             print(f"Error: the instruction {instruction} doesn't exists.")
