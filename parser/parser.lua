@@ -114,8 +114,11 @@ function parseCmd()
     elseif peek("local") then
         eat("local")
         local name = parseExpPrimaria()
-        eat("=")
-        local exp = parseExp()
+        local exp = nil
+        if peek("=") then
+            eat("=")
+            exp = parseExp()
+        end
         return {tag = 'CmdLocal', name = name, exp = exp}
 
     elseif peek("function") then
