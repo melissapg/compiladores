@@ -281,21 +281,23 @@ function compile_prog(e)
   elseif e.tag == 'ExpStr' then
     local pos = 1
     local word = ''
-    local loop_condition = true
-    while loop_condition do
-      char = string.sub(e.val, pos, pos)
-      if char == '\n' then
-        char = '@n'
-      elseif char == '\r' then
-        char = '@r'
-      elseif char == '@' then
-        char = '@@'
-      end
-      word = word .. char
-      if pos == #e.val then
-        loop_condition = false
-      else
-        pos = pos + 1
+    if #e.val ~= 0 then
+      local loop_condition = true
+      while loop_condition do
+        char = string.sub(e.val, pos, pos)
+        if char == '\n' then
+          char = '@n'
+        elseif char == '\r' then
+          char = '@r'
+        elseif char == '@' then
+          char = '@@'
+        end
+        word = word..char
+        if pos == #e.val then
+          loop_condition = false
+        else
+          pos = pos + 1
+        end
       end
     end
     add_instr('STRING "'..word..'"')
