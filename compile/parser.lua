@@ -1,6 +1,15 @@
 lexer = require("lexer")
-errors = require("errors_package")
 local parser =  {}
+
+
+function syntax_error(msg)
+    --[=[
+    Emite uma mensagem de syntax_error e termina a execução do programa.
+    Recebe uma string contendo a mensagem de syntax_error.
+    ]=]
+    print('\nSyntaxError:\n', msg, '\n')
+    os.exit(1)
+  end
 
 
 function parser.init_parser(text)
@@ -9,7 +18,7 @@ function parser.init_parser(text)
     Recebe uma string contendo os tokens a serem processados.
     ]=]
     lexer.init_lexer(text)
-    prox = lexer.get_next_token()
+    parser.walk()
 end
 
 
@@ -36,7 +45,7 @@ function eat(tag)
         parser.walk()
         return current_tag
     else
-        errors.syntax_error("Found: "..current_tag.." was expecting: "..prox.tag)
+        syntax_error("Found: "..current_tag.." was expecting: "..prox.tag)
     end
 end
 
@@ -146,7 +155,7 @@ function parseCmd()
             return {tag = "CmdChamada", exp = exp1}
         end
     else
-        errors.syntax_error("Found: "..prox.tag.." but was expecting a command.")
+        syntax_error("Found: "..prox.tag.." but was expecting a command.")
     end
 end
 
@@ -167,7 +176,7 @@ function parseElses()
             local elses = parseElses()
             return {tag = "CmdIfElse", exp = exp, bloco = block, elses = elses}
         else
-            errors.syntax_error("Found: "..prox.tag.."Was expecting a elseif or else.")
+            syntax_error("Found: "..prox.tag.."Was expecting a elseif or else.")
         end
     end
     eat("end")

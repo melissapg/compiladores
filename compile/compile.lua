@@ -1,21 +1,12 @@
 parser = require("parser")  -- modulo parser
 
-texto = io.read("a")
 
-parser.init_parser(texto)
-prog = parser.parseProg()
-
-
-instructions = {}  -- armazena as instruções  // dentro de uma funcao
-program_counter = 0  -- contador de instruções  // dentro de uma funcao
 function add_instr(instruction, val)
   program_counter = program_counter + 1
   table.insert(instructions, {instr = instruction, val = val})
 end
 
 
-labels = {}  -- armazena as labels  // dentro de uma funcao
-labels_counter = 0  -- contador de labels  // dentro de uma funcao
 function new_label()
   labels_counter = labels_counter + 1
   local lbl_id = 'l'..labels_counter
@@ -49,7 +40,7 @@ end
 
 function compileJumpTrue(exp, dest)
   if exp.op == 'not' then
-    compileJumpTrue(exp, dest)
+    compileJumpTrue(exp.exp, dest)
   elseif exp.op == 'and' then
     compileJumpFalse(exp.e1, dest)
     compileJumpFalse(exp.e2, dest)
@@ -65,8 +56,6 @@ function compileJumpTrue(exp, dest)
 end
 
 
-locals = {}
-locals_counter = 0
 function create_variable(name)
   locals_counter = locals_counter + 1
   table.insert(locals, {name = name})
@@ -86,16 +75,16 @@ function find_variable(name)
 end
 
 
-scopes = {}  -- escopos  // dentro de uma funcao
-scopes_counter = 0
 function enter_scope()
   scopes_counter = scopes_counter + 1
   table.insert(scopes, locals_counter)
 end
 
 
--- pop em todas as variáveis locais do escopo que está saindo
 function exit_scope()
+  --[[
+  Pop em todas as variáveis locais do escopo que está saindo.
+  ]]
   while locals_counter > scopes[scopes_counter] do
     table.remove(locals, locals_counter)
     locals_counter = locals_counter - 1
@@ -111,8 +100,10 @@ function compile_prog(e)
     return
 
   elseif e.tag == 'Bloco' then
-    for _, v in pairs(e.block) do
-      compile_prog(v)
+    local i = 1
+    while i <= #e.block do
+      compile_prog(e.block[i])
+      i = i + 1
     end
     return
   elseif e.tag == 'CmdWhile' then
@@ -154,13 +145,15 @@ function compile_prog(e)
     local func_name = e.name.val
     local cont_params = 0
     local i = 1
-    while true do
+    local params_exist = true
+    while params_exist do
       if not e.params.params[i] then
-        break
+        params_exist = false
+      else
+        create_variable(e.params.params[i].val)
+        cont_params = cont_params + 1
+        i = i + 1
       end
-      create_variable(e.params.params[i].val)
-      cont_params = cont_params + 1
-      i = i + 1
     end
     add_instr("FUNCTION "..func_name, cont_params)
     compile_prog(e.bloco)
@@ -288,20 +281,22 @@ function compile_prog(e)
   elseif e.tag == 'ExpStr' then
     local pos = 1
     local word = ''
-    while true do
+    local loop_condition = true
+    while loop_condition do
       char = string.sub(e.val, pos, pos)
       if char == '\n' then
         char = '@n'
-      elseif  char == '\r'  then
+      elseif char == '\r' then
         char = '@r'
-      elseif  char == '@'  then
+      elseif char == '@' then
         char = '@@'
-      -- elseif  char == '"' or "'" then  # consertar aqui add o @q
-      --   char = '@q'
       end
-      word = word..char
-      if pos == #e.val then break end
-      pos = pos + 1
+      word = word .. char
+      if pos == #e.val then
+        loop_condition = false
+      else
+        pos = pos + 1
+      end
     end
     add_instr('STRING "'..word..'"')
     return
@@ -330,18 +325,22 @@ function compile_prog(e)
     return
   elseif e.tag == 'Exps' then
     local exps = 0
-    for _, v in pairs(e.exps) do
-      compile_prog(v)
+    local i = 1
+    while i <= #e.exps do
+      compile_prog(e.exps[i])
       exps = exps + 1
+      i = i + 1
     end
     add_instr("CALL", exps)
     return
 
   elseif e.tag == 'ExpTabela' then
     local keys = 0
-    for _, v in pairs(e.keyvals) do
-      compile_prog(v)
+    local i = 1
+    while i <= #e.keyvals do
+      compile_prog(e.keyvals[i])
       keys = keys + 1
+      i = i + 1
     end
     add_instr("NEW_TABLE", keys)
     return
@@ -374,6 +373,28 @@ function print_prog()
 end
 
 
-compile_prog(prog)
-print_prog()
-print("EXIT")
+function main()
+  texto = io.read("a")
+
+  parser.init_parser(texto)
+  prog = parser.parseProg()
+
+  instructions = {}  -- armazena as instruções
+  program_counter = 0  -- contador de instruções
+
+  labels = {}  -- armazena as labels
+  labels_counter = 0  -- contador de labels
+
+  locals = {}  -- armazena as variáveis locais
+  locals_counter = 0  -- contador de variáveis locais
+
+  scopes = {}  -- armazena os escopos
+  scopes_counter = 0  -- contador de escopos
+
+  compile_prog(prog)
+  print_prog()
+  print("EXIT")
+end
+
+
+main()

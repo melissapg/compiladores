@@ -17,16 +17,18 @@ function is_keyword(variable)
     Checa se uma variável é uma palavra reservada.
     Retorna a palavra reservada caso positivo. Do contrário, retorna falso.
   ]=]
-  keywords = {'true', 'false', 'nil', 'local',
-              'while', 'for', 'do', 'end', 'in',
-              'if', 'then', 'else', 'elseif',
-              'function', 'return', 'break',
-              'repeat', 'until',
-              'not', 'and', 'or'}
-  for _, v in pairs(keywords) do
-      if v == variable then
-        return variable
-      end
+  local i = 1
+  local keywords = {'true', 'false', 'nil', 'local',
+                    'while', 'for', 'do', 'end', 'in',
+                    'if', 'then', 'else', 'elseif',
+                    'function', 'return', 'break',
+                    'repeat', 'until',
+                    'not', 'and', 'or'}
+  while i <= #keywords do
+    if keywords[i] == variable then
+      return variable
+    end
+    i = i + 1
   end
   return false
 end
@@ -94,14 +96,15 @@ function lexer.get_next_token()
     --[[comentario bloco]]
     if c == '[' and string.sub(texto, pos+1, pos+1) == '[' then
       pos = pos + 1
-      while true do
+      local shouldBreak = false
+      while not shouldBreak do
         pos = pos + 1
         c = string.sub(texto, pos, pos)
         -- condição de parada do comentário em bloco
         if c == ']' and string.sub(texto, pos+1, pos+1) == ']' then
           pos = pos + 2
           line, column = walk('column')
-          break
+          shouldBreak = true
         -- condição de nova linha em um comentário em bloco
         elseif c == "\n" or c == '\r' then
           pos = pos + 1
@@ -111,14 +114,15 @@ function lexer.get_next_token()
     --[[comentario bloco grande]]
     elseif c == '[' and string.sub(texto, pos+1, pos+1) == '=' and string.sub(texto, pos+2, pos+2) == '[' then
       pos = pos + 2
-      while true do
+      local shouldBreak = false
+      while not shouldBreak do
         pos = pos + 1
         c = string.sub(texto, pos, pos)
         -- condição de parada do comentário em bloco grande
         if c == ']' and string.sub(texto, pos+1, pos+1) == '=' and string.sub(texto, pos+2, pos+2) == ']' then
           pos = pos + 3
           line, column = walk('column')
-          break
+          shouldBreak = true
         -- condição de nova linha em um comentário em bloco grande
         elseif c == "\n" or c == '\r' then
           pos = pos + 1
@@ -127,12 +131,13 @@ function lexer.get_next_token()
       end
     --[[comentario simples]]
     else
-      while true do
+      local shouldBreak = false
+      while not shouldBreak do
         -- condição de parada do comentário simples
         if c == "\n" or c == "" or c == '\r' then
           pos = pos + 1
           line, column = walk('line')
-          break
+          shouldBreak = true
         end
         pos = pos + 1
         c = string.sub(texto, pos, pos)
@@ -148,23 +153,22 @@ function lexer.get_next_token()
     local count_dots, count_exp, count_x = 0, 0, 0
     local count_digits = 0  -- contador de digitos
 
-    while true do
+    local should_continue = true
+    while should_continue do
       count_digits = count_digits + 1
       pos = pos + 1
       c = string.sub(texto, pos, pos)
       -- condição de parada do número com uma ocorrência de nova linha
       if c == "" or  c == " " or c == "\t" or c == "\n" or c == '\r' then
-        break
+        should_continue = false
       -- condição onde o token não é um número [0-9]
       elseif string.byte(c) < 48 or string.byte(c) > 57 then
         -- condição para os números decimais possuírem apenas 1 ponto
         if c == '.' and count_dots == 0 then
           count_dots = count_dots + 1
-          goto continue
         -- condição dos números hexadecimais terem sempre a precedência '0x' e só aparecerem uma vez no número, no início.
         elseif (c == 'x' or c == 'X') and string.sub(texto, pos-1, pos-1) == '0' and count_x == 0 and count_digits == 1 then
           count_x = count_x + 1
-          goto continue
         -- condição do expoente de 10 (e ou E) aparecer apenas uma vez no número
         elseif (c == 'e' or c == 'E') and count_exp == 0 then
           count_exp = count_exp + 1
@@ -173,23 +177,31 @@ function lexer.get_next_token()
           c = string.sub(texto, pos, pos)
           -- condição para o token '+' aparecer apenas quando precedido de um expoente de 10
           if c == '+' then
-            goto continue
-          -- depois de um expoente de 10 é permitido qualquer número [0-9]
-          elseif string.byte(c) >= 48 and string.byte(c) <= 57 then
-            goto continue
+            local expo_flag = false
+            while not expo_flag do
+              pos = pos + 1
+              c = string.sub(texto, pos, pos)
+              -- depois de um expoente de 10 é permitido qualquer número [0-9]
+              if string.byte(c) >= 48 and string.byte(c) <= 57 then
+                expo_flag = true
+              elseif c == "" or c == " " or c == "\t" or c == "\n" or c == '\r' then
+                expo_flag = true
+                should_continue = false
+              else
+                return
+              end
+            end
           else
-            break
+            should_continue = false
           end
         -- condição dos números hexadecimais minúsculos e maiúsculos sucederem '0x'
-        elseif string.byte(c) >= 65 and string.byte(c) <= 70 and count_x == 1 then  -- minúsculo
-            goto continue
-        elseif string.byte(c) >= 97 and string.byte(c) <= 102 and count_x == 1 then -- maiúsculo
-          goto continue
+        elseif (string.byte(c) >= 65 and string.byte(c) <= 70 and count_x == 1) or
+               (string.byte(c) >= 97 and string.byte(c) <= 102 and count_x == 1) then
+          -- continue
         else
-          break
+          should_continue = false
         end
       end
-      ::continue::
       number = number..c
     end
     return gen_token('NUMERO', tonumber(number), walk('column'))
@@ -200,33 +212,35 @@ function lexer.get_next_token()
          c == '_' then
     local variable = c
 
-    while true do
+    local endVariable = false
+    while not endVariable do
       pos = pos + 1
       c = string.sub(texto, pos, pos)
       -- condição de parada da variável com uma ocorrência de nova linha
       if c == "" or  c == " " or c == "\t" or c == "\n" or c == '\r' then
-        break
+        endVariable = true
       -- condição onde o token não é uma letra maiúscula do alfabeto [A-Z]
       elseif string.byte(c) < 65 or string.byte(c) > 90 then
         -- condição onde o token é uma letra minúscula do alfabeto [a-z] e pode estar na string
         if string.byte(c) >= 97 and string.byte(c) <= 122 then
-          goto continue
+          -- continue
         -- condição onde o token é um número [0-9] e pode estar na string
         elseif string.byte(c) >= 48 and string.byte(c) <= 57 then
-          goto continue
+          -- continue
         -- condição onde o token é um _ e pode estar na string
         elseif c == '_' then
-          goto continue
+          -- continue
         else
-          break
+          endVariable = true
         end
       end
-      ::continue::
-      variable = variable..c
+      if not endVariable then
+        variable = variable..c
+      end
     end
 
     -- checagem de variável ser ou não uma palavra reservada (keyword).
-    is_k = is_keyword(variable)
+    local is_k = is_keyword(variable)
     if is_k then  -- keyword
       return gen_token(is_k, nil, walk('column'))
     else  -- variável
@@ -236,39 +250,35 @@ function lexer.get_next_token()
   --[[string aspas simples]]
   elseif c == "'" then
     local str = ""
-    while true do
+    local endOfString = false
+    while not endOfString do
       pos = pos + 1
       c = string.sub(texto, pos, pos)
       -- condição de parada da string de aspas simples
       if c == "'" then
         pos = pos + 1
-        break
+        endOfString = true
       -- condição de remoção dos caracteres de escape \n e \r, com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\n' or string.sub(texto, pos, pos+1) == '\\r' then
         pos = pos + 1
         str = str..'\n'
-        goto continue
       -- condição de remoção do caractere de escape \t, com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\t' then
         pos = pos + 1
         str = str.."\t"
-        goto continue
       -- condição de remoção do caractere de escape \v, com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\v' then
         pos = pos + 1
         str = str.."\v"
-        goto continue
       -- condição de remoção do caractere de escape \f, com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\f' then
         pos = pos + 1
         str = str.."\f"
-        goto continue
       -- condição de remoção dos caracteres de escape \\ \' \", com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\\\' or string.sub(texto, pos, pos+1) == '\\\'' or
              string.sub(texto, pos, pos+1) == '\\\"' then
         pos = pos + 1
         str = str..string.sub(texto, pos, pos)
-        goto continue
       -- condição de erro: faltando fechar as aspas simples
       elseif c == '\n' or c == '\r' or c == '' then
         print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
@@ -279,48 +289,44 @@ function lexer.get_next_token()
         print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
               'Invalid escape character '..string.sub(texto, pos, pos+1)..'.\n')
         os.exit(1)
+      else
+        str = str..c
       end
-      str = str..c
-      ::continue::
     end
     return gen_token('STRING', str, walk('column'))
 
   --[[string aspas duplas]]
   elseif c == '"' then
     local str = ""
-    while true do
+    local endOfString = false
+    while not endOfString do
       pos = pos + 1
       c = string.sub(texto, pos, pos)
       -- condição de parada da string de aspas duplas
       if c == '"' then
         pos = pos + 1
-        break
+        endOfString = true
       -- condição de remoção dos caracteres de escape \n e \r, com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\n' or string.sub(texto, pos, pos+1) == '\\r' then
         pos = pos + 1
         str = str..'\n'
-        goto continue
       -- condição de remoção do caractere de escape \t, com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\t' then
         pos = pos + 1
         str = str.."\t"
-        goto continue
       -- condição de remoção do caractere de escape \v, com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\v' then
         pos = pos + 1
         str = str.."\v"
-        goto continue
       -- condição de remoção do caractere de escape \f, com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\f' then
         pos = pos + 1
         str = str.."\f"
-        goto continue
       -- condição de remoção dos caracteres de escape \\ \' \", com inserção direta na string
       elseif string.sub(texto, pos, pos+1) == '\\\\' or string.sub(texto, pos, pos+1) == '\\\'' or
              string.sub(texto, pos, pos+1) == '\\\"' then
         pos = pos + 1
         str = str..string.sub(texto, pos, pos)
-        goto continue
       -- condição de erro: faltando fechar as aspas duplas
       elseif c == '\n' or c == '\r' or c == '' then
         print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
@@ -331,9 +337,9 @@ function lexer.get_next_token()
         print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
               'Invalid escape character '..string.sub(texto, pos, pos+1)..'.\n')
         os.exit(1)
+      else
+        str = str..c
       end
-      str = str..c
-      ::continue::
     end
     return gen_token('STRING', str, walk('column'))
 
@@ -346,13 +352,14 @@ function lexer.get_next_token()
     c = string.sub(texto, pos, pos)
     --[[string bloco]]
     if c == '[' then
-      while true do
+      local endOfStringBlock = false
+      while not endOfStringBlock do
         pos = pos + 1
         c = string.sub(texto, pos, pos)
         -- condição de parada da string de bloco
         if c == ']' and string.sub(texto, pos+1, pos+1) == ']' then
           pos = pos + 1
-          break
+          endOfStringBlock = true
         -- condição de nova linha em uma string de bloco
         elseif c == "\n" or c == '\r' then
           line, column = walk('line')
@@ -360,28 +367,23 @@ function lexer.get_next_token()
         elseif string.sub(texto, pos, pos+1) == '\\n' or string.sub(texto, pos, pos+1) == '\\r' then
           pos = pos + 1
           str = str..'\n'
-          goto continue
         -- condição de remoção do caractere de escape \t, com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\t' then
           pos = pos + 1
           str = str.."\t"
-          goto continue
         -- condição de remoção do caractere de escape \v, com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\v' then
           pos = pos + 1
           str = str.."\v"
-          goto continue
         -- condição de remoção do caractere de escape \f, com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\f' then
           pos = pos + 1
           str = str.."\f"
-          goto continue
         -- condição de remoção dos caracteres de escape \\ \' \", com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\\\' or string.sub(texto, pos, pos+1) == '\\\'' or
                string.sub(texto, pos, pos+1) == '\\\"' then
           pos = pos + 1
           str = str..string.sub(texto, pos, pos)
-          goto continue
         -- condição de erro: faltando fechar o bloco
         elseif c == '' then
           print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
@@ -392,21 +394,22 @@ function lexer.get_next_token()
           print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
                 'Invalid escape character '..string.sub(texto, pos, pos+1)..'.\n')
           os.exit(1)
+        else
+          str = str..c
         end
-        str = str..c
-        ::continue::
       end
       line, column = walk('column')
     -- [[string bloco grande]]
     elseif c == '=' then
+      local endOfStringBlockLarge = false
       pos = pos + 1
-      while true do
+      while not endOfStringBlockLarge do
         pos = pos + 1
         c = string.sub(texto, pos, pos)
         -- condição de parada da string de bloco grande
         if c == ']' and string.sub(texto, pos+1, pos+1) == '=' and string.sub(texto, pos+2, pos+2) == ']' then
           pos = pos + 2
-          break
+          endOfStringBlockLarge = true
         -- condição de nova linha em uma string de bloco
         elseif c == "\n" or c == '\r' then
           line, column = walk('line')
@@ -414,28 +417,23 @@ function lexer.get_next_token()
         elseif string.sub(texto, pos, pos+1) == '\\n' or string.sub(texto, pos, pos+1) == '\\r' then
           pos = pos + 1
           str = str..'\n'
-          goto continue
         -- condição de remoção do caractere de escape \t, com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\t' then
           pos = pos + 1
           str = str.."\t"
-          goto continue
         -- condição de remoção do caractere de escape \v, com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\v' then
           pos = pos + 1
           str = str.."\v"
-          goto continue
         -- condição de remoção do caractere de escape \f, com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\f' then
           pos = pos + 1
           str = str.."\f"
-          goto continue
         -- condição de remoção dos caracteres de escape \\ \' \", com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\\\' or string.sub(texto, pos, pos+1) == '\\\'' or
                string.sub(texto, pos, pos+1) == '\\\"' then
           pos = pos + 1
           str = str..string.sub(texto, pos, pos)
-          goto continue
         -- condição de erro: faltando fechar o bloco grande
         elseif c == '' then
           print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
@@ -446,9 +444,9 @@ function lexer.get_next_token()
           print('\nSyntaxError at line '..tok.lin..'.'..tok.col..':\n'..
                 'Invalid escape character '..string.sub(texto, pos, pos+1)..'.\n')
           os.exit(1)
+        else
+          str = str..c
         end
-        str = str..c
-        ::continue::
       end
       line, column = walk('column')
     end

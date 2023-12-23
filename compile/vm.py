@@ -27,7 +27,7 @@ class FunçaoInterna:
             exit(True)
 
     def print(self, args: list, out: str = ''):
-        out = ''.join(str(arg) for arg in args)
+        out = '\t'.join(str(arg) for arg in args)
         return print(out)
 
     def tonumber(self, args: list):
@@ -186,7 +186,14 @@ def list_instructions():
         raise
 
     for line in f.readlines():
-        prog_array.append(line)
+        args = []
+        instrs = line.split()
+        if instrs[0] == 'STRING':
+            args.append(instrs[0])
+            args.append(re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', line)[0])
+        else:
+            args = [arg for arg in instrs]
+        prog_array.append(args)
     return prog_array
 
 
@@ -245,16 +252,16 @@ def eval(prog):
 
     while True:
         line = prog[program_counter]
-        instruction = line.split()[0]
+        instruction = line[0]
 
         if instruction == 'NUMBER':
-            stack.push_stack(int(line.split()[1]))
+            stack.push_stack(int(line[1]))
 
         elif instruction == 'NIL':
             stack.push_stack(None)
 
         elif instruction == 'BOOL':
-            bool_t = line.split()[1]
+            bool_t = line[1]
             if bool_t == 'true':
                 bool_t = True
             else:
@@ -269,38 +276,41 @@ def eval(prog):
             stack.push_stack(calc_exp(n1, None, instruction))
 
         elif instruction == 'STRING':
-            string = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', line)[0]
-            string = string.replace("@n", "\n").replace("@r", "\r").replace("@@", "@")  # add aqui o @q
+            string = line[1]
+
+            replacements = {"@n": "\n", "@r": "\r", "@@": "@"}
+            for pattern, replacement in replacements.items():
+                string = re.sub(re.escape(pattern), replacement, string)
             stack.push_stack(str(string))
 
         elif instruction == 'SET_GLOBAL':
             var = stack.pop_stack()
-            variables[line.split()[1]] = var
+            variables[line[1]] = var
 
         elif instruction == 'GET_GLOBAL':
             try:
-                val = variables[line.split()[1]]
+                val = variables[line[1]]
             except:
                 try:
-                    val = functions.find_function(line.split()[1])
+                    val = functions.find_function(line[1])
                 except:
                     val = None
             stack.push_stack(val)
 
         elif instruction == 'SET_LOCAL':
             var = stack.pop_stack()
-            variables[int(line.split()[1])] = var
+            variables[int(line[1])] = var
 
         elif instruction == 'GET_LOCAL':
             try:
-                val = variables[int(line.split()[1])]
+                val = variables[int(line[1])]
             except:
                 val = None
             stack.push_stack(val)
 
         elif instruction == 'NEW_TABLE':
             newtable = {}
-            for _ in range(int(line.split()[1])):
+            for _ in range(int(line[1])):
                 val = stack.pop_stack()
                 key = stack.pop_stack()
                 newtable[key] = val
@@ -334,18 +344,18 @@ def eval(prog):
                 exit(True)
 
         elif instruction == 'FUNCTION':
-            function_name = line.split()[1]
-            n_args = int(line.split()[2])
+            function_name = line[1]
+            n_args = int(line[2])
             functions.add_function(function_name, n_args, program_counter)
             while True:  # dá pra simplificar e melhorar isso aqui
-                instruction = prog[program_counter].split()[0]
+                instruction = prog[program_counter][0]
                 program_counter += 1
-                next_instruction = prog[program_counter].split()[0]
+                next_instruction = prog[program_counter][0]
                 if instruction == 'NIL' and next_instruction == "RETURN":
                         break
 
         elif instruction == 'CALL':
-            n_args = int(line.split()[1])
+            n_args = int(line[1])
             args = []
             for _ in range(n_args):
                 n1 = stack.pop_stack()
@@ -376,7 +386,7 @@ def eval(prog):
             stack.push_stack(ret)
 
         elif instruction == 'POP':
-            for _ in range(int(line.split()[1])):
+            for _ in range(int(line[1])):
                 stack.pop_stack()
 
         elif instruction in ['ADD', 'SUB', 'MUL', 'IDIV', 'MOD']:
@@ -421,19 +431,19 @@ def eval(prog):
             stack.push_stack(str_concat)
 
         elif instruction == 'JUMP':
-            program_counter = int(line.split()[1])
+            program_counter = int(line[1])
             continue
 
         elif instruction == 'JUMP_TRUE':
             bool_t = stack.pop_stack()
             if bool_t:
-                program_counter = int(line.split()[1])
+                program_counter = int(line[1])
                 continue
 
         elif instruction == 'JUMP_FALSE':
             bool_t = stack.pop_stack()
             if not bool_t:
-                program_counter = int(line.split()[1])
+                program_counter = int(line[1])
                 continue
 
         elif instruction == 'EXIT':

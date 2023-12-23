@@ -1,3 +1,5 @@
+-- Testes
+
 function eu(minha, triste, vida)
   local abelha = 'a'
   abelha = 'abelha'
@@ -14,10 +16,10 @@ function eu(minha, triste, vida)
 end
 
 function vc()
-  local alb = 1
+  local a_lb = 1
   local burn
-  alb = 2
-  return alb
+  a_lb = 2
+  return a_lb
 end
 
 function vc_e_eu()
@@ -35,13 +37,26 @@ function oi(a, b)
   local c = "3"
   local d
   d = 4
-  print(d..a..b..c)
+  if not(c) then
+    print(d..a..b..c)
+  else
+    print(a..b..c..d)
+  end
   return a
 end
 
-a = oi('1', '2')
+function maper(list)
+  i = 1
+  while i <= #list do
+    print(list[i])
+    i = i + 1
+  end
+end
+
+a = oi('1', "2")
 print(a)
 
 eu()
 vc()
 vc_e_eu()
+-- maper({set = 1})
