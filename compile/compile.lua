@@ -363,13 +363,14 @@ function print_prog()
     local instr = instructions[idx]['instr']
     local val = instructions[idx]['val']
     if val then
-      if string.sub(val, 1, 1) == 'l' then
+      if string.sub(val, 1, 1) == 'l' and (instr == 'JUMP' or instr == 'JUMP_TRUE' or instr == 'JUMP_FALSE') then
         local label = labels[val].val
         print(instr..' '..label)
       else
         print(instr..' '..val)
       end
-    else print(instr) end
+    else
+      print(instr) end
     idx = idx + 1
   end
 end

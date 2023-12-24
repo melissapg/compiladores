@@ -72,3 +72,6 @@ function faz_nada()
 end
 
 faz_nada()
+
+
+print("FELIZ NATAL")

@@ -19,6 +19,7 @@ class Stack:
         return False if self.stack else True
 
 
+MODULAR_FUNCTIONS = ['byte', 'len', 'rep', 'sub', 'insert', 'remove']
 class FunçaoInterna:
     def index_error(self, function_name: str, args: list, n_args: int = 1):
         more_args = f' or {n_args}' if n_args != 1 else ''
@@ -45,8 +46,9 @@ class FunçaoInterna:
         self.index_error('type', args)
         return type(args[0])
 
-    def string_byte(self, args: list):
-        self.index_error('string_byte', args, 2)
+    # string module
+    def byte(self, args: list):
+        self.index_error('string.byte', args, 1)
 
         string = args[0]
         idx = 1 if len(args) < 2 else args[1]
@@ -58,15 +60,17 @@ class FunçaoInterna:
         else:
             return None
 
-    def string_len(self, args: list):
-        self.index_error('string_len', args)
+    # string module
+    def len(self, args: list):
+        self.index_error('string.len', args)
         if not isinstance(args[0], str):
             print(f"Error: Bad argument to 'len' (string expected, got {type(args[0])})")
             exit(True)
         return len(args[0])
 
-    def string_rep(self, args: list):
-        self.index_error('string_rep', args, 2)
+    # string module
+    def rep(self, args: list):
+        self.index_error('string.rep', args, 2)
         string = args[0]
         rep = args[1]
         if not isinstance(string, str):
@@ -78,8 +82,9 @@ class FunçaoInterna:
             print(f"Error: Bad argument to 'rep' (number expected, got {type(rep)})")
             exit(True)
 
-    def string_sub(self, args: list):
-        self.index_error('string_sub', args, 2)
+    # string module
+    def sub(self, args: list):
+        self.index_error('string.sub', args, 2)
         string = args[0]
         start = args[1]
         end =  args[2] if len(args) == 3 else None
@@ -94,40 +99,28 @@ class FunçaoInterna:
             print(f"Error: Bad argument to 'sub' (number expected, got {type(start), type(end)})")
             exit(True)
 
-    def table_insert(self, args: list):
-        self.index_error('table_insert', args, 2)
+    def insert(self, args: list):
+        self.index_error('table.insert', args, 2)
         table = args[0]
         val = args[1]
 
         if not isinstance(table, dict):
-            print(f"Error: Bad argument to 'table_insert' (dict expected, got {type(table)})")
+            print(f"Error: Bad argument to 'insert' (dict expected, got {type(table)})")
             exit(True)
         table[len(table) + 1] = val
         return table
 
-    def table_remove(self, args: list):
-        self.index_error('table_remove', args, 2)
+    def remove(self, args: list):
+        self.index_error('table.remove', args, 2)
         table = args[0]
         key = args[1]
 
         if not isinstance(table, dict):
-            print(f"Error: Bad argument to 'table_remove' (dict expected, got {type(table)})")
+            print(f"Error: Bad argument to 'remove' (dict expected, got {type(table)})")
             exit(True)
         if key in table:
             del table[key]
         return table
-
-    def assert_error(self, args: list):
-        return
-
-    def io_read(self, args: list):
-        return
-
-    def io_write(self, args: list):
-        return
-
-    def os_exit(self, args: list):
-        return
 
     def all(self):
         return {
@@ -135,16 +128,16 @@ class FunçaoInterna:
             "tonumber": self.tonumber,
             "tostring": self.tostring,
             "type": self.type,
-            "string_byte": self.string_byte,
-            "string_len": self.string_len,
-            "string_rep": self.string_rep,
-            "string_sub": self.string_sub,
-            "table_insert": self.table_insert,
-            "table_remove": self.table_remove,
-            "assert": self.assert_error,
-            "io_read": self.io_read,
-            "io_write": self.io_write,
-            "os_exit": self.os_exit
+            "string": {
+                "byte": self.byte,
+                "len": self.len,
+                "rep": self.rep,
+                "sub": self.sub
+            },
+            "table": {
+                "insert": self.insert,
+                "remove": self.remove
+            }
         }
 
 
@@ -288,14 +281,18 @@ def eval(prog):
             variables[line[1]] = var
 
         elif instruction == 'GET_GLOBAL':
-            try:
-                val = variables[line[1]]
-            except:
+            if line[1] in MODULAR_FUNCTIONS:
+                functions = stack.pop_stack()
+                stack.push_stack(functions[line[1]])
+            else:
                 try:
-                    val = functions.find_function(line[1])
+                    val = variables[line[1]]
                 except:
-                    val = None
-            stack.push_stack(val)
+                    try:
+                        val = functions.find_function(line[1])
+                    except:
+                        val = None
+                stack.push_stack(val)
 
         elif instruction == 'SET_LOCAL':
             var = stack.pop_stack()
@@ -319,6 +316,9 @@ def eval(prog):
             stack.push_stack(newtable)
         
         elif instruction == 'GET_TABLE':
+            if prog[program_counter+1][0] == 'CALL':
+                program_counter += 1
+                continue
             key = stack.pop_stack()
             table = stack.pop_stack()
             if not isinstance(table, dict):

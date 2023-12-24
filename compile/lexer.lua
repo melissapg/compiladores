@@ -33,7 +33,7 @@ function is_keyword(variable)
   return false
 end
 
-function walk(through)
+function lexer_walk(through)
   --[=[
     Avança uma coluna ou linha.
     Retorna os valores da coluna e linha salvos antes de avançar.
@@ -71,7 +71,7 @@ function lexer.get_next_token()
 
   --[[eof]]
   if c == "" then
-    return gen_token('EOF', nil, walk('column'))
+    return gen_token('EOF', nil, lexer_walk('column'))
 
   --[[newline]]
   elseif c == '\n' or c == '\r' then
@@ -81,12 +81,12 @@ function lexer.get_next_token()
     else
       pos = pos + 1
     end
-    return gen_token('NEWLINE', nil, walk('line'))
+    return gen_token('NEWLINE', nil, lexer_walk('line'))
 
   --[[space, tab]]
   elseif c == " " or c == "\t" then
     pos = pos + 1
-    return gen_token('SPACE', nil, walk('column'))
+    return gen_token('SPACE', nil, lexer_walk('column'))
 
   --[[comentarios]]
   elseif c == "-" and string.sub(texto, pos+1, pos+1) == '-' then
@@ -103,12 +103,12 @@ function lexer.get_next_token()
         -- condição de parada do comentário em bloco
         if c == ']' and string.sub(texto, pos+1, pos+1) == ']' then
           pos = pos + 2
-          line, column = walk('column')
+          line, column = lexer_walk('column')
           shouldBreak = true
         -- condição de nova linha em um comentário em bloco
         elseif c == "\n" or c == '\r' then
           pos = pos + 1
-          line, column = walk('line')
+          line, column = lexer_walk('line')
         end
       end
     --[[comentario bloco grande]]
@@ -121,12 +121,12 @@ function lexer.get_next_token()
         -- condição de parada do comentário em bloco grande
         if c == ']' and string.sub(texto, pos+1, pos+1) == '=' and string.sub(texto, pos+2, pos+2) == ']' then
           pos = pos + 3
-          line, column = walk('column')
+          line, column = lexer_walk('column')
           shouldBreak = true
         -- condição de nova linha em um comentário em bloco grande
         elseif c == "\n" or c == '\r' then
           pos = pos + 1
-          line, column = walk('line')
+          line, column = lexer_walk('line')
         end
       end
     --[[comentario simples]]
@@ -136,7 +136,7 @@ function lexer.get_next_token()
         -- condição de parada do comentário simples
         if c == "\n" or c == "" or c == '\r' then
           pos = pos + 1
-          line, column = walk('line')
+          line, column = lexer_walk('line')
           shouldBreak = true
         end
         pos = pos + 1
@@ -152,7 +152,6 @@ function lexer.get_next_token()
     -- contadores para ocorrência de e+, pontos e números hexadecimais
     local count_dots, count_exp, count_x = 0, 0, 0
     local count_digits = 0  -- contador de digitos
-
     local should_continue = true
     while should_continue do
       count_digits = count_digits + 1
@@ -177,34 +176,27 @@ function lexer.get_next_token()
           c = string.sub(texto, pos, pos)
           -- condição para o token '+' aparecer apenas quando precedido de um expoente de 10
           if c == '+' then
-            local expo_flag = false
-            while not expo_flag do
-              pos = pos + 1
-              c = string.sub(texto, pos, pos)
-              -- depois de um expoente de 10 é permitido qualquer número [0-9]
-              if string.byte(c) >= 48 and string.byte(c) <= 57 then
-                expo_flag = true
-              elseif c == "" or c == " " or c == "\t" or c == "\n" or c == '\r' then
-                expo_flag = true
-                should_continue = false
-              else
-                return
-              end
-            end
+            should_continue = true
+          -- depois de um expoente de 10 é permitido qualquer número [0-9]
+          elseif string.byte(c) >= 48 and string.byte(c) <= 57 then
+            should_continue = true
           else
             should_continue = false
           end
         -- condição dos números hexadecimais minúsculos e maiúsculos sucederem '0x'
-        elseif (string.byte(c) >= 65 and string.byte(c) <= 70 and count_x == 1) or
-               (string.byte(c) >= 97 and string.byte(c) <= 102 and count_x == 1) then
-          -- continue
+        elseif string.byte(c) >= 65 and string.byte(c) <= 70 and count_x == 1 then  -- minúsculo
+          should_continue = true
+        elseif string.byte(c) >= 97 and string.byte(c) <= 102 and count_x == 1 then -- maiúsculo
+          should_continue = true
         else
           should_continue = false
         end
       end
-      number = number..c
+      if should_continue then
+        number = number..c
+      end
     end
-    return gen_token('NUMERO', tonumber(number), walk('column'))
+    return gen_token('NUMERO', tonumber(number), lexer_walk('column'))
 
   --[[variaveis]]  -- um token variável/nome pode se iniciar com [A-Za-z_].
   elseif (string.byte(c) >= 65 and string.byte(c) <= 90) or
@@ -242,9 +234,9 @@ function lexer.get_next_token()
     -- checagem de variável ser ou não uma palavra reservada (keyword).
     local is_k = is_keyword(variable)
     if is_k then  -- keyword
-      return gen_token(is_k, nil, walk('column'))
+      return gen_token(is_k, nil, lexer_walk('column'))
     else  -- variável
-      return gen_token('NOME', variable, walk('column'))
+      return gen_token('NOME', variable, lexer_walk('column'))
     end
 
   --[[string aspas simples]]
@@ -293,7 +285,7 @@ function lexer.get_next_token()
         str = str..c
       end
     end
-    return gen_token('STRING', str, walk('column'))
+    return gen_token('STRING', str, lexer_walk('column'))
 
   --[[string aspas duplas]]
   elseif c == '"' then
@@ -341,7 +333,7 @@ function lexer.get_next_token()
         str = str..c
       end
     end
-    return gen_token('STRING', str, walk('column'))
+    return gen_token('STRING', str, lexer_walk('column'))
 
   --[[strings especiais]]
   elseif c == '[' and (string.sub(texto, pos+1, pos+1) == '[' or string.sub(texto, pos+1, pos+1) == '=') then
@@ -362,7 +354,7 @@ function lexer.get_next_token()
           endOfStringBlock = true
         -- condição de nova linha em uma string de bloco
         elseif c == "\n" or c == '\r' then
-          line, column = walk('line')
+          line, column = lexer_walk('line')
         -- condição de remoção dos caracteres de escape \n e \r, com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\n' or string.sub(texto, pos, pos+1) == '\\r' then
           pos = pos + 1
@@ -398,7 +390,7 @@ function lexer.get_next_token()
           str = str..c
         end
       end
-      line, column = walk('column')
+      line, column = lexer_walk('column')
     -- [[string bloco grande]]
     elseif c == '=' then
       local endOfStringBlockLarge = false
@@ -412,7 +404,7 @@ function lexer.get_next_token()
           endOfStringBlockLarge = true
         -- condição de nova linha em uma string de bloco
         elseif c == "\n" or c == '\r' then
-          line, column = walk('line')
+          line, column = lexer_walk('line')
         -- condição de remoção dos caracteres de escape \n e \r, com inserção direta na string
         elseif string.sub(texto, pos, pos+1) == '\\n' or string.sub(texto, pos, pos+1) == '\\r' then
           pos = pos + 1
@@ -448,7 +440,7 @@ function lexer.get_next_token()
           str = str..c
         end
       end
-      line, column = walk('column')
+      line, column = lexer_walk('column')
     end
     pos = pos + 1
     return gen_token('STRING', str, line, column)
@@ -457,13 +449,13 @@ function lexer.get_next_token()
   elseif c == "," or c == ";" or c == ":" or c == "(" or
          c == ")" or c == "[" or c == "]" or c == "{" or c == "}" then
     pos = pos + 1
-    return gen_token(c, nil, walk('column'))
+    return gen_token(c, nil, lexer_walk('column'))
 
   --[[operadores]]
   elseif c == "+" or c == "-" or c == "*" or c == "/" or
          c == "^" or c == "%" or c == "#" or c == "&" or c == "|" then
     pos = pos + 1
-    return gen_token(c, nil, walk('column'))
+    return gen_token(c, nil, lexer_walk('column'))
 
   --[[pontos]]
   elseif c == "." then
@@ -474,14 +466,14 @@ function lexer.get_next_token()
       -- condição onde há três pontos seguidos
       if string.sub(texto, pos, pos) == '.' then
         pos = pos + 1
-        return gen_token(c..string.sub(texto, pos-2, pos-1), nil, walk('column'))
+        return gen_token(c..string.sub(texto, pos-2, pos-1), nil, lexer_walk('column'))
       -- condição onde há dois pontos seguidos
       else
-        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk('column'))
+        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, lexer_walk('column'))
       end
     -- condição onde há apenas um ponto
     else
-      return gen_token(c, nil, walk('column'))
+      return gen_token(c, nil, lexer_walk('column'))
     end
 
   --[[iguais]]
@@ -490,10 +482,10 @@ function lexer.get_next_token()
     -- condição onde há um token '=' sucedendo outro token '='
     if string.sub(texto, pos, pos) == '=' then
       pos = pos + 1
-      return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk('column'))
+      return gen_token(c..string.sub(texto, pos-1, pos-1), nil, lexer_walk('column'))
     -- condição onde há apenas um token '='
     else
-      return gen_token(c, nil, walk('column'))
+      return gen_token(c, nil, lexer_walk('column'))
     end
 
   --[[diferente e negacao]]
@@ -502,10 +494,10 @@ function lexer.get_next_token()
       -- condição onde há um token '=' sucedendo um token '~'
       if string.sub(texto, pos, pos) == '=' then
         pos = pos + 1
-        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk('column'))
+        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, lexer_walk('column'))
       -- condição onde há apenas um token '~'
       else
-        return gen_token(c, nil, walk('column'))
+        return gen_token(c, nil, lexer_walk('column'))
       end
 
   --[[menor, menor ou igual e left shift]]
@@ -514,10 +506,10 @@ function lexer.get_next_token()
       -- condição onde há um token '=' ou '<' sucedendo um token '<'
       if string.sub(texto, pos, pos) == '<' or string.sub(texto, pos, pos) == '=' then  -- <= ou <<
         pos = pos + 1
-        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk('column'))
+        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, lexer_walk('column'))
       -- condição onde há apenas um token '<'
       else
-        return gen_token(c, nil, walk('column'))
+        return gen_token(c, nil, lexer_walk('column'))
       end
 
   --[[maior, maior ou igual, right shift]]
@@ -526,10 +518,10 @@ function lexer.get_next_token()
       -- condição onde há um token '=' ou '<' sucedendo um token '>'
       if string.sub(texto, pos, pos) == '>' or string.sub(texto, pos, pos) == '=' then  -- >= ou >>
         pos = pos + 1
-        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, walk('column'))
+        return gen_token(c..string.sub(texto, pos-1, pos-1), nil, lexer_walk('column'))
       -- condição onde há apenas um token '>'
       else
-        return gen_token(c, nil, walk('column'))
+        return gen_token(c, nil, lexer_walk('column'))
       end
 
   --[[erro de token nao existente]]
