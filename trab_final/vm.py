@@ -1,5 +1,3 @@
-## Melissa Pereira Guarilha
-
 import sys
 import re
 

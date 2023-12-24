@@ -1,6 +1,3 @@
--- Melissa Pereira Guarilha
-
-
 function init_lexer(str)
   --[=[
     Inicia o lexer com as variáveis 'globais'.
